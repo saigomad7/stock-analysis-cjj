@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<title>주식분석 대시보드</title>
+<style>
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f0f1a;
+  --bg2: #1a1a2e;
+  --bg3: #16213e;
+  --card: #1e1e32;
+  --card2: #252540;
+  --accent: #4f8ef7;
+  --accent2: #7c5cbf;
+  --green: #2ecc71;
+  --red: #e74c3c;
+  --yellow: #f39c12;
+  --text: #e8e8f0;
+  --text2: #9090b0;
+  --border: #2a2a4a;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --nav-h: 64px;
+  --header-h: 56px;
+  --shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+#app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ============================================================
+   Header
+   ============================================================ */
+.header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  flex-shrink: 0;
+}
+.header-content {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; height: var(--header-h);
+}
+.header-title { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: var(--accent); }
+.logo { font-size: 22px; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.icon-btn { background: none; border: none; color: var(--text2); font-size: 20px; cursor: pointer; padding: 4px 6px; border-radius: var(--radius-sm); transition: color 0.2s, background 0.2s; }
+.icon-btn:hover { color: var(--accent); background: var(--bg3); }
+.status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text2); display: inline-block; }
+.status-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.offline { background: var(--red); }
+
+.progress-bar { height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); animation: progress-anim 1.5s linear infinite; }
+@keyframes progress-anim { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+/* ============================================================
+   Main / Tabs
+   ============================================================ */
+#main-content { flex: 1; overflow-y: auto; padding-bottom: calc(var(--nav-h) + 16px); }
+.tab-content { display: none; padding: 12px 12px 0; }
+.tab-content.active { display: block; }
+
+/* ============================================================
+   Cards
+   ============================================================ */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.card2 { background: var(--card2); }
+.section-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin: 14px 0 8px; padding-left: 4px; }
+
+/* Action Cards (수집/분석) */
+.action-card { margin-bottom: 8px; }
+.collect-card { border-left: 3px solid var(--yellow); }
+.analyze-card { border-left: 3px solid var(--accent); }
+.action-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.action-card-title { font-size: 14px; font-weight: 700; }
+.action-card-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.action-card-desc { font-size: 11px; color: var(--text2); line-height: 1.5; margin-top: 4px; }
+.action-progress { font-size: 11px; color: var(--yellow); margin: 4px 0; }
+.analyze-card .action-progress { color: var(--accent); }
+.btn-collect { background: rgba(243,156,18,0.15); color: var(--yellow); border: 1px solid rgba(243,156,18,0.4); padding: 7px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn-collect:hover { background: rgba(243,156,18,0.25); }
+.btn-collect:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Status Card (legacy) */
+.status-card { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.status-info { flex: 1; }
+.status-info span { display: block; }
+#last-run-text { font-size: 12px; color: var(--text2); }
+.badge { display: inline-block; background: var(--bg3); color: var(--accent); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+.badge-gold { background: rgba(243,156,18,0.15); color: var(--yellow); }
+.badge-green { background: rgba(46,204,113,0.15); color: var(--green); }
+
+/* ============================================================
+   Stock Cards (Home)
+   ============================================================ */
+.card-list { display: flex; flex-direction: column; gap: 8px; }
+.stock-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px;
+  cursor: pointer; transition: border-color 0.2s, transform 0.1s;
+}
+.stock-card:active { transform: scale(0.99); }
+.stock-card:hover { border-color: var(--accent); }
+.stock-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.stock-name { font-weight: 600; font-size: 15px; }
+.stock-code { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.stock-price-block { text-align: right; }
+.stock-price { font-size: 16px; font-weight: 700; }
+.stock-target { font-size: 11px; color: var(--text2); }
+.stock-target .ratio { font-weight: 600; }
+.stock-target .ratio.pos { color: var(--green); }
+.stock-target .ratio.neg { color: var(--red); }
+.stock-metrics { display: flex; gap: 6px; flex-wrap: wrap; }
+.metric-chip {
+  font-size: 11px; padding: 3px 8px; border-radius: 20px;
+  background: var(--bg3); color: var(--text2); border: 1px solid var(--border);
+}
+.metric-chip.positive { background: rgba(46,204,113,0.1); color: var(--green); border-color: rgba(46,204,113,0.3); }
+.metric-chip.negative { background: rgba(231,76,60,0.1); color: var(--red); border-color: rgba(231,76,60,0.3); }
+.metric-chip.neutral { background: rgba(79,142,247,0.1); color: var(--accent); border-color: rgba(79,142,247,0.3); }
+
+/* Intersection chips */
+.stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.stock-chip { background: rgba(243,156,18,0.1); border: 1px solid rgba(243,156,18,0.3); color: var(--yellow); font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
+
+/* ============================================================
+   Table (Stocks Tab)
+   ============================================================ */
+.filter-bar { display: flex; gap: 8px; padding: 10px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+.select-sm { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 13px; appearance: none; cursor: pointer; }
+.search-input { flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 13px; }
+.search-input::placeholder { color: var(--text2); }
+.search-input:focus, .select-sm:focus { outline: none; border-color: var(--accent); }
+
+.table-container { overflow-x: auto; padding: 0 12px 12px; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th { background: var(--bg3); color: var(--text2); padding: 8px 10px; text-align: left; font-weight: 600; position: sticky; top: 0; white-space: nowrap; border-bottom: 1px solid var(--border); }
+.data-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table tr:hover td { background: rgba(79,142,247,0.05); }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.text-green { color: var(--green); }
+.text-red { color: var(--red); }
+.text-yellow { color: var(--yellow); }
+.text-accent { color: var(--accent); }
+
+/* ============================================================
+   Charts
+   ============================================================ */
+.chart-card { padding: 16px; }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.chart-wrap { position: relative; height: 200px; }
+.tooltip-icon { font-size: 13px; color: var(--text2); cursor: help; }
+
+/* ============================================================
+   Settings
+   ============================================================ */
+.setting-section-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.setting-label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; margin-top: 8px; }
+.setting-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; }
+.setting-input:focus { outline: none; border-color: var(--accent); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.setting-field label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 3px; }
+.setting-field input { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: var(--radius-sm); font-size: 12px; }
+.setting-field input:focus { outline: none; border-color: var(--accent); }
+
+.api-test-result { font-size: 12px; margin-top: 8px; min-height: 18px; }
+.api-test-result.ok { color: var(--green); }
+.api-test-result.err { color: var(--red); }
+
+.db-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.db-info-item { background: var(--bg3); border-radius: var(--radius-sm); padding: 10px; text-align: center; }
+.db-info-value { font-size: 18px; font-weight: 700; color: var(--accent); }
+.db-info-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn-primary { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; }
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; margin-top: 8px; width: 100%; }
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: rgba(231,76,60,0.15); color: var(--red); border: 1px solid rgba(231,76,60,0.3); padding: 10px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; margin-top: 4px; }
+.btn-danger:hover { background: rgba(231,76,60,0.25); }
+.full-width { width: 100%; }
+
+/* ============================================================
+   Bottom Nav
+   ============================================================ */
+.bottom-nav {
+  display: flex; background: var(--bg2); border-top: 1px solid var(--border);
+  height: var(--nav-h); flex-shrink: 0;
+  position: sticky; bottom: 0; z-index: 100;
+}
+.nav-btn {
+  flex: 1; background: none; border: none; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px; cursor: pointer;
+  color: var(--text2); transition: color 0.2s; padding: 8px 0;
+}
+.nav-btn.active { color: var(--accent); }
+.nav-btn:hover { color: var(--accent); }
+.nav-icon { font-size: 20px; }
+.nav-label { font-size: 10px; font-weight: 500; }
+
+/* ============================================================
+   Toast
+   ============================================================ */
+.toast {
+  position: fixed; bottom: calc(var(--nav-h) + 16px); left: 50%; transform: translateX(-50%);
+  background: var(--card2); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 20px; border-radius: 24px; font-size: 13px; z-index: 999;
+  box-shadow: var(--shadow); white-space: nowrap;
+  transition: opacity 0.3s;
+}
+.toast.hidden { opacity: 0; pointer-events: none; }
+
+/* ============================================================
+   Loading Overlay
+   ============================================================ */
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+}
+.loading-overlay.hidden { display: none; }
+.loading-box { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 40px; text-align: center; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; color: var(--text2); max-width: 220px; }
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+.hidden { display: none !important; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 13px; }
+
+/* ============================================================
+   Manual Tab
+   ============================================================ */
+.manual-hero { text-align: center; padding: 28px 16px 20px; }
+.manual-logo { font-size: 42px; margin-bottom: 8px; }
+.manual-hero-title { font-size: 20px; font-weight: 700; color: var(--accent); }
+.manual-hero-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+.manual-section { margin-bottom: 6px; }
+.manual-section-title { font-size: 13px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 0 8px 2px; }
+
+/* Architecture diagram */
+.manual-arch { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.arch-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+.arch-box { text-align: center; padding: 10px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; line-height: 1.4; min-width: 72px; }
+.arch-box span { font-size: 10px; font-weight: 400; display: block; margin-top: 2px; }
+.arch-db { background: rgba(79,142,247,0.15); border: 1px solid rgba(79,142,247,0.3); color: var(--accent); }
+.arch-api { background: rgba(124,92,191,0.15); border: 1px solid rgba(124,92,191,0.3); color: var(--accent2); }
+.arch-app { background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.3); color: var(--green); }
+.arch-arrow { color: var(--text2); font-size: 16px; }
+.arch-note { text-align: center; font-size: 11px; color: var(--text2); }
+
+/* Steps */
+.manual-steps { display: flex; flex-direction: column; gap: 8px; }
+.manual-step { display: flex; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.step-body { flex: 1; }
+.step-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.step-badge { font-size: 10px; background: rgba(243,156,18,0.15); color: var(--yellow); border: 1px solid rgba(243,156,18,0.3); padding: 1px 6px; border-radius: 10px; }
+.step-desc { font-size: 12px; color: var(--text2); margin-bottom: 6px; line-height: 1.5; }
+
+/* Code blocks */
+.manual-code { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; color: var(--green); line-height: 1.6; }
+.manual-code-block { padding: 12px 14px; white-space: pre; overflow-x: auto; }
+
+/* Feature cards */
+.manual-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
+.manual-card-header { background: var(--bg3); padding: 10px 14px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--border); }
+.manual-list { padding: 10px 14px; margin: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.manual-list li { font-size: 12px; color: var(--text2); padding-left: 12px; position: relative; line-height: 1.5; }
+.manual-list li::before { content: '·'; position: absolute; left: 0; color: var(--accent); }
+.manual-list li strong { color: var(--text); }
+
+/* Tables */
+.manual-table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+.manual-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.manual-table th { background: var(--bg3); color: var(--text2); padding: 8px 12px; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.manual-table td { padding: 8px 12px; border-bottom: 1px solid rgba(42,42,74,0.5); color: var(--text2); line-height: 1.4; }
+.manual-table td:first-child { color: var(--accent); font-weight: 500; white-space: nowrap; }
+.manual-table tr:last-child td { border-bottom: none; }
+
+.manual-footer { text-align: center; font-size: 11px; color: var(--text2); padding: 20px 0 8px; }
+
+/* ============================================================
+   Help Modal
+   ============================================================ */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 500; display: flex; align-items: flex-end; justify-content: center; }
+.modal-overlay.hidden { display: none !important; }
+.modal-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; width: 100%; max-width: 600px; max-height: 88vh; display: flex; flex-direction: column; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.modal-title { font-size: 15px; font-weight: 700; color: var(--accent); }
+.modal-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: var(--radius-sm); }
+.modal-close:hover { color: var(--text); background: var(--bg3); }
+.modal-body { overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+
+.help-section { margin-bottom: 18px; }
+.help-section-title { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.help-arch { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.arch-pill { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 20px; }
+.arch-db  { background: rgba(79,142,247,0.15); color: var(--accent); border: 1px solid rgba(79,142,247,0.3); }
+.arch-api { background: rgba(124,92,191,0.15); color: var(--accent2); border: 1px solid rgba(124,92,191,0.3); }
+.arch-app { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+.arch-arr { color: var(--text2); font-size: 14px; }
+.help-note { font-size: 11px; color: var(--text2); }
+
+.help-steps { display: flex; flex-direction: column; gap: 7px; }
+.help-step { display: flex; align-items: flex-start; gap: 10px; background: var(--card); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12px; color: var(--text2); line-height: 1.5; }
+.hstep-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.help-step strong { color: var(--text); }
+.help-step code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 11px; color: var(--green); font-family: 'SF Mono', monospace; }
+
+.help-table { display: flex; flex-direction: column; gap: 1px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+.htrow { display: flex; background: var(--card); }
+.htrow.err .htcol-k { color: var(--red); }
+.htcol-k { width: 90px; flex-shrink: 0; padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--accent); background: var(--bg3); border-right: 1px solid var(--border); }
+.htcol-v { flex: 1; padding: 8px 10px; font-size: 11px; color: var(--text2); line-height: 1.5; }
+
+.help-footer { font-size: 11px; color: var(--text2); text-align: center; padding-top: 12px; line-height: 1.8; }
+.help-footer code { background: var(--bg3); padding: 1px 5px; border-radius: 4px; font-size: 10px; }
+.help-footer a { color: var(--accent); }
+
+/* ============================================================
+   No Data Guide
+   ============================================================ */
+.no-data-guide { text-align: center; padding: 28px 20px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; }
+.no-data-icon { font-size: 48px; margin-bottom: 12px; }
+.no-data-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+.no-data-desc { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 14px; }
+.no-data-actions { text-align: left; }
+.guide-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.guide-step { display: flex; align-items: flex-start; gap: 10px; background: var(--bg3); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--text2); line-height: 1.5; }
+.guide-num { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.guide-step code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; font-size: 11px; color: var(--green); font-family: 'SF Mono', monospace; }
+.btn-link { background: none; border: none; color: var(--text2); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 4px; display: block; margin: 0 auto; }
+.btn-link:hover { color: var(--accent); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-title">
+        <span class="logo">📈</span>
+        <span>주식분석</span>
+      </div>
+      <div class="header-actions">
+        <span id="db-status-dot" class="status-dot" title="DB 상태"></span>
+        <button class="icon-btn" onclick="showHelp()" title="도움말">?</button>
+        <button class="icon-btn" onclick="showTab('settings')" title="설정">⚙</button>
+      </div>
+    </div>
+    <div id="progress-bar" class="progress-bar hidden"></div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="main-content">
+
+    <!-- 홈 탭 -->
+    <section id="tab-home" class="tab-content active">
+      <!-- 데이터 수집 카드 -->
+      <div class="card action-card collect-card">
+        <div class="action-card-header">
+          <div>
+            <div class="action-card-title">📥 데이터 수집</div>
+            <div id="collect-time-text" class="action-card-sub">재무데이터 미수집</div>
+          </div>
+          <button class="btn-collect" onclick="collectData()" id="collect-btn">수집 실행</button>
+        </div>
+        <div id="collect-progress" class="action-progress hidden"></div>
+        <div class="action-card-desc">KRX 전체 종목 재무정보(목표주가·외국인소진·영업이익)를 네이버에서 수집합니다. 하루 1회 권장.</div>
+      </div>
+
+      <!-- 분석 실행 카드 -->
+      <div class="card action-card analyze-card">
+        <div class="action-card-header">
+          <div>
+            <div class="action-card-title">📈 분석 실행</div>
+            <div id="last-run-text" class="action-card-sub">분석 데이터 없음</div>
+          </div>
+          <button class="btn-primary" onclick="runAnalysis()" id="analyze-btn">분석 실행</button>
+        </div>
+        <div id="analyze-progress" class="action-progress hidden"></div>
+        <div class="action-card-desc">수집된 데이터로 파라미터를 바꿔가며 빠르게 반복 분석합니다. 재무 수집 없이 DB만 읽습니다.</div>
+        <span id="stock-count-text" class="badge" style="margin-top:6px"></span>
+      </div>
+
+      <!-- 데이터 없을 때 안내 -->
+      <div id="no-data-guide" class="no-data-guide hidden">
+        <div id="no-data-icon" class="no-data-icon">📭</div>
+        <div id="no-data-title" class="no-data-title">연결 필요</div>
+        <div id="no-data-desc" class="no-data-desc"></div>
+        <div id="no-data-actions" class="no-data-actions"></div>
+        <button class="btn-link" onclick="showTab('manual')" style="margin-top:8px">📖 사용 방법 보기</button>
+      </div>
+
+      <div id="home-data-section">
+        <div class="section-title">교집합 종목 <span id="intersection-badge" class="badge badge-gold"></span></div>
+        <div id="intersection-list" class="stock-chips"></div>
+
+        <div class="section-title">📊 추천 종목 (기간1 기준)</div>
+        <div id="choice1-list" class="card-list"></div>
+
+        <div class="section-title">🏆 추천 종목 (순위 기준)</div>
+        <div id="choice2-list" class="card-list"></div>
+      </div>
+    </section>
+
+    <!-- 종목 탭 -->
+    <section id="tab-stocks" class="tab-content">
+      <div class="filter-bar">
+        <select id="stock-filter-mode" onchange="renderStockTable()" class="select-sm">
+          <option value="choice1">기간1 기준</option>
+          <option value="choice2">순위 기준</option>
+          <option value="filter1">필터 상세1</option>
+          <option value="filter2">필터 상세2</option>
+        </select>
+        <input id="stock-search" type="search" placeholder="종목명 검색..." oninput="renderStockTable()" class="search-input">
+      </div>
+      <div id="stock-table-container" class="table-container"></div>
+    </section>
+
+    <!-- 시장 탭 -->
+    <section id="tab-market" class="tab-content">
+      <div class="card chart-card">
+        <div class="chart-title">하락 수준 추이 <span class="tooltip-icon" title="전체/단기/장기 하락 종목 비율">ⓘ</span></div>
+        <div class="chart-wrap">
+          <canvas id="decline-chart"></canvas>
+        </div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-title">전체 종목 상승하강 평균 <span class="tooltip-icon" title="전체 종목의 일별 평균 등락률">ⓘ</span></div>
+        <div class="chart-wrap">
+          <canvas id="mean-rate-chart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 매뉴얼 탭 -->
+    <section id="tab-manual" class="tab-content">
+      <div class="manual-hero">
+        <div class="manual-logo">📈</div>
+        <div class="manual-hero-title">주식분석 대시보드</div>
+        <div class="manual-hero-sub">사용 가이드</div>
+      </div>
+
+      <!-- 시스템 구성 -->
+      <div class="manual-section">
+        <div class="manual-section-title">🏗️ 시스템 구성</div>
+        <div class="manual-arch">
+          <div class="arch-row">
+            <div class="arch-box arch-db">🗄️ MariaDB<br><span>investar DB</span></div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box arch-api">⚡ FastAPI<br><span>Mac 백엔드</span></div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box arch-app">📱 이 앱<br><span>Netlify</span></div>
+          </div>
+          <div class="arch-note">데이터는 Mac에서 수집/분석, 결과만 앱에서 조회</div>
+        </div>
+      </div>
+
+      <!-- 최초 설정 -->
+      <div class="manual-section">
+        <div class="manual-section-title">🚀 최초 설정 (Mac에서 실행)</div>
+        <div class="manual-steps">
+          <div class="manual-step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <div class="step-title">DB 데이터 수집 <span class="step-badge">최초 1회</span></div>
+              <div class="step-desc">KRX 전체 종목(약 2,700개) + 네이버금융 시세 수집. 약 30분 소요.</div>
+              <div class="manual-code">cd stock_app/backend<br>python3 db_updater.py</div>
+            </div>
+          </div>
+          <div class="manual-step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <div class="step-title">API 서버 실행</div>
+              <div class="step-desc">분석 엔진 서버를 시작합니다. Mac이 켜져 있는 동안 실행 유지.</div>
+              <div class="manual-code">bash run.sh</div>
+            </div>
+          </div>
+          <div class="manual-step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <div class="step-title">외부 터널 열기 <span class="step-badge">모바일 접속 시</span></div>
+              <div class="step-desc">별도 터미널에서 실행. Cloudflare URL을 앱 설정에 입력.</div>
+              <div class="manual-code">bash run.sh</div>
+            </div>
+          </div>
+          <div class="manual-step">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <div class="step-title">앱 서버 URL 설정</div>
+              <div class="step-desc">⚙ 설정 탭 → API 서버 URL → Cloudflare 주소 입력 후 저장.</div>
+              <div class="manual-code">예) https://xxxx.trycloudflare.com</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 일별 운영 -->
+      <div class="manual-section">
+        <div class="manual-section-title">📅 일별 운영</div>
+        <div class="manual-steps">
+          <div class="manual-step">
+            <div class="step-num">①</div>
+            <div class="step-body">
+              <div class="step-title">매일 13시 — db_updater 자동 실행</div>
+              <div class="step-desc">최초 실행 후 다음 날 13시에 자동으로 시세를 업데이트합니다.</div>
+            </div>
+          </div>
+          <div class="manual-step">
+            <div class="step-num">②</div>
+            <div class="step-body">
+              <div class="step-title">앱에서 "분석 실행" 버튼 클릭</div>
+              <div class="step-desc">DB 데이터를 읽어 분석을 수행합니다. 네이버 재크롤링 없음.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 탭별 기능 -->
+      <div class="manual-section">
+        <div class="manual-section-title">📱 화면별 기능</div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">🏠 홈</div>
+          <ul class="manual-list">
+            <li><strong>교집합 종목</strong> — 두 기준(기간1·순위)에 모두 해당하는 종목. 신뢰도 높음.</li>
+            <li><strong>추천 종목 (기간1 기준)</strong> — 단기(15일) 수익률 가중 스코어 상위 종목.</li>
+            <li><strong>추천 종목 (순위 기준)</strong> — 6개 기간 종합 순위 기준 상위 종목.</li>
+            <li><strong>종가목표</strong> — (목표주가 - 현재가) / 목표주가. 양수일수록 상승 여력 큼.</li>
+            <li><strong>신호 n/4</strong> — RSI·볼린저·OBV 기술적 지표 매수 신호 개수.</li>
+          </ul>
+        </div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">📋 종목</div>
+          <ul class="manual-list">
+            <li><strong>기간1 기준</strong> — 최종 추천 종목 (단기 가중).</li>
+            <li><strong>순위 기준</strong> — 최종 추천 종목 (종합 순위).</li>
+            <li><strong>필터 상세1/2</strong> — 필터 통과 종목 전체. 종가·목표주가·회귀선 포함.</li>
+            <li>종목명으로 실시간 검색 가능.</li>
+          </ul>
+        </div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">📊 시장</div>
+          <ul class="manual-list">
+            <li><strong>하락 수준 추이</strong> — 전체/단기추천/장기추천 종목 중 하락한 비율(%). 80% 이상이면 시장 과매도 구간.</li>
+            <li><strong>상승하강 평균</strong> — 전체 종목의 일별 평균 등락률. -1.5% 이하면 급락 구간.</li>
+          </ul>
+        </div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">⚙️ 설정</div>
+          <ul class="manual-list">
+            <li><strong>API 서버 URL</strong> — Mac 백엔드 주소 (Cloudflare URL).</li>
+            <li><strong>기간별 가중치</strong> — 스코어 계산 시 각 기간의 비중. 합계가 1이 되도록.</li>
+            <li><strong>분석 기간</strong> — 기간1~4는 일/월 단위, 기간5~6은 월/년 단위.</li>
+            <li><strong>필터 파라미터</strong> — 종목 필터 조건. 값을 0으로 하면 해당 조건 비활성.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 분석 지표 -->
+      <div class="manual-section">
+        <div class="manual-section-title">📐 분석 지표 설명</div>
+        <div class="manual-table-wrap">
+          <table class="manual-table">
+            <thead><tr><th>지표</th><th>설명</th><th>해석</th></tr></thead>
+            <tbody>
+              <tr><td>기간1~6</td><td>기간별 초반/후반 평균 가격 변화율</td><td>양수 = 상승 중</td></tr>
+              <tr><td>회귀선</td><td>최근 n일 종가의 선형회귀 기울기</td><td>양수 = 우상향 추세</td></tr>
+              <tr><td>RSI</td><td>14일 기준 상대강도지수</td><td>30 이하 과매도, 70 이상 과매수</td></tr>
+              <tr><td>볼린저밴드</td><td>이동평균 ± 2σ 밴드 이탈 횟수</td><td>하단 이탈 많으면 매수 신호</td></tr>
+              <tr><td>OBV</td><td>거래량 기반 매수/매도 압력</td><td>매수 > 매도면 상승 압력</td></tr>
+              <tr><td>긍정부정</td><td>최근 60일 가중 상승/하락일 차이</td><td>양수 = 최근 상승 우세</td></tr>
+              <tr><td>종가목표</td><td>(목표주가 - 종가) / 목표주가</td><td>양수이고 클수록 상승 여력 큼</td></tr>
+              <tr><td>외국인소진</td><td>외국인 보유 비율 (%)</td><td>높을수록 외국인 선호 종목</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 기본 파라미터 -->
+      <div class="manual-section">
+        <div class="manual-section-title">🎛️ 기본 파라미터 값</div>
+        <div class="manual-table-wrap">
+          <table class="manual-table">
+            <thead><tr><th>파라미터</th><th>기본값</th><th>의미</th></tr></thead>
+            <tbody>
+              <tr><td>종가 범위</td><td>2만 ~ 30만원</td><td>분석 대상 종가 구간</td></tr>
+              <tr><td>거래량 필터</td><td>10만주 이상</td><td>평균 거래량 하한</td></tr>
+              <tr><td>종목 기간</td><td>250일 이상</td><td>상장 후 최소 거래 기간</td></tr>
+              <tr><td>외국인소진</td><td>1% 이상</td><td>외국인 보유 최소 비율</td></tr>
+              <tr><td>영업이익</td><td>-50억 이상</td><td>극심한 적자 종목 제외</td></tr>
+              <tr><td>가중치</td><td>기간1~4: 0.2 / 기간5~6: 0.1</td><td>단기 비중 높게</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 파일 구조 -->
+      <div class="manual-section">
+        <div class="manual-section-title">📁 파일 구조</div>
+        <div class="manual-code manual-code-block">stock_app/
+├── backend/
+│   ├── analysis.py     분석 엔진 (RSI/BB/OBV/스코어)
+│   ├── main.py         FastAPI 서버 (REST API)
+│   ├── db_updater.py   KRX+네이버 크롤러 (일별 실행)
+│   ├── run.sh          서버+터널 한번에 실행
+│   └── stop.sh         서버+터널 종료
+└── frontend/           (Netlify 배포)
+    ├── index.html
+    ├── css/style.css
+    └── js/app.js</div>
+      </div>
+
+      <!-- API 엔드포인트 -->
+      <div class="manual-section">
+        <div class="manual-section-title">🔌 API 엔드포인트</div>
+        <div class="manual-table-wrap">
+          <table class="manual-table">
+            <thead><tr><th>엔드포인트</th><th>설명</th></tr></thead>
+            <tbody>
+              <tr><td>GET /api/health</td><td>서버 상태 확인</td></tr>
+              <tr><td>GET /api/db-status</td><td>DB 연결 및 데이터 현황</td></tr>
+              <tr><td>POST /api/analyze</td><td>분석 실행 (백그라운드)</td></tr>
+              <tr><td>GET /api/status</td><td>분석 진행 상태 조회</td></tr>
+              <tr><td>GET /api/results</td><td>분석 결과 조회 (캐시)</td></tr>
+              <tr><td>GET /api/defaults</td><td>기본 파라미터 조회</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="manual-footer">
+        Built with FastAPI · MariaDB · Chart.js · Netlify
+      </div>
+    </section>
+
+    <!-- 설정 탭 -->
+    <section id="tab-settings" class="tab-content">
+      <div class="card">
+        <div class="setting-section-title">🔗 서버 설정</div>
+        <label class="setting-label">API 서버 URL</label>
+        <input id="api-url" type="url" class="setting-input" placeholder="http://localhost:8000">
+        <button class="btn-secondary" onclick="saveApiUrl()">저장</button>
+        <div id="api-test-result" class="api-test-result"></div>
+      </div>
+
+      <div class="card">
+        <div class="setting-section-title">⚖️ 기간별 가중치</div>
+        <div id="weights-form" class="grid-2"></div>
+      </div>
+
+      <div class="card">
+        <div class="setting-section-title">📅 분석 기간 설정</div>
+        <div id="periods-form" class="grid-2"></div>
+      </div>
+
+      <div class="card">
+        <div class="setting-section-title">🔽 필터 파라미터</div>
+        <div id="params-form" class="grid-2"></div>
+      </div>
+
+      <div class="card">
+        <div class="setting-section-title">🗄️ DB 상태</div>
+        <div id="db-info" class="db-info-grid"></div>
+      </div>
+
+      <button class="btn-danger full-width" onclick="resetSettings()">기본값으로 초기화</button>
+    </section>
+
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="home" onclick="showTab('home')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">홈</span>
+    </button>
+    <button class="nav-btn" data-tab="stocks" onclick="showTab('stocks')">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">종목</span>
+    </button>
+    <button class="nav-btn" data-tab="market" onclick="showTab('market')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">시장</span>
+    </button>
+    <button class="nav-btn" data-tab="settings" onclick="showTab('settings')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">설정</span>
+    </button>
+    <button class="nav-btn" data-tab="manual" onclick="showTab('manual')">
+      <span class="nav-icon">📖</span>
+      <span class="nav-label">매뉴얼</span>
+    </button>
+  </nav>
+
+  <!-- Help Modal -->
+  <div id="help-modal" class="modal-overlay hidden" onclick="closeHelp(event)">
+    <div class="modal-box" id="help-modal-box">
+      <div class="modal-header">
+        <span class="modal-title">📖 사용 가이드</span>
+        <button class="modal-close" onclick="closeHelp()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <div class="help-section">
+          <div class="help-section-title">🏗️ 시스템 구성</div>
+          <div class="help-arch">
+            <span class="arch-pill arch-db">🗄️ MariaDB</span>
+            <span class="arch-arr">→</span>
+            <span class="arch-pill arch-api">⚡ FastAPI (Mac)</span>
+            <span class="arch-arr">→</span>
+            <span class="arch-pill arch-app">📱 이 앱</span>
+          </div>
+          <p class="help-note">분석 엔진은 Mac에서 실행, 결과를 앱에서 조회</p>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">🚀 매일 사용 순서</div>
+          <div class="help-steps">
+            <div class="help-step"><span class="hstep-num">1</span><div><strong>Mac 터미널:</strong> <code>bash run.sh</code> 실행 (서버 유지)</div></div>
+            <div class="help-step"><span class="hstep-num">2</span><div><strong>Mac 터미널 새 탭:</strong> <code>bash run.sh</code> 실행</div></div>
+            <div class="help-step"><span class="hstep-num">3</span><div>출력된 <code>https://xxxx.trycloudflare.com</code> 주소를 ⚙ 설정 → API URL에 입력</div></div>
+            <div class="help-step"><span class="hstep-num">4</span><div><strong>홈 탭 → 📥 데이터 수집</strong> (하루 1회, 재무정보 캐싱)</div></div>
+            <div class="help-step"><span class="hstep-num">5</span><div><strong>홈 탭 → 📈 분석 실행</strong> (파라미터 바꾸며 반복 가능)</div></div>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">📱 화면별 기능</div>
+          <div class="help-table">
+            <div class="htrow"><span class="htcol-k">🏠 홈</span><span class="htcol-v">교집합 추천종목, 기간1/순위 기준 추천 카드</span></div>
+            <div class="htrow"><span class="htcol-k">📋 종목</span><span class="htcol-v">전체 필터링 결과 테이블 + 종목명 검색</span></div>
+            <div class="htrow"><span class="htcol-k">📊 시장</span><span class="htcol-v">하락추이 차트, 상승하강 평균 차트</span></div>
+            <div class="htrow"><span class="htcol-k">⚙ 설정</span><span class="htcol-v">API URL, 가중치·기간·파라미터 조정</span></div>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">📐 주요 지표</div>
+          <div class="help-table">
+            <div class="htrow"><span class="htcol-k">교집합</span><span class="htcol-v">두 기준 모두 해당 → 신뢰도 높음</span></div>
+            <div class="htrow"><span class="htcol-k">종가목표</span><span class="htcol-v">(목표주가-현재가)/목표주가, 양수=상승여력</span></div>
+            <div class="htrow"><span class="htcol-k">신호 n/4</span><span class="htcol-v">RSI·볼린저·OBV 매수신호 합계</span></div>
+            <div class="htrow"><span class="htcol-k">긍부정</span><span class="htcol-v">최근 상승일·하락일 가중 차이 (양수=상승우세)</span></div>
+            <div class="htrow"><span class="htcol-k">회귀선</span><span class="htcol-v">최근 추세 기울기 (양수=우상향)</span></div>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">🎛️ 핵심 파라미터</div>
+          <div class="help-table">
+            <div class="htrow"><span class="htcol-k">종가 범위</span><span class="htcol-v">para15(최소) ~ para16(최대), 기본 2만~30만</span></div>
+            <div class="htrow"><span class="htcol-k">영업이익</span><span class="htcol-v">para17, 기본 -50억 이상 (극적자 제외)</span></div>
+            <div class="htrow"><span class="htcol-k">종목기간</span><span class="htcol-v">para14, 기본 80일 (DB 보유 거래일 수)</span></div>
+            <div class="htrow"><span class="htcol-k">외국인소진</span><span class="htcol-v">para4, 기본 1% 이상</span></div>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <div class="help-section-title">⚠️ 자주 발생하는 문제</div>
+          <div class="help-table">
+            <div class="htrow err"><span class="htcol-k">서버 연결 실패</span><span class="htcol-v">run.sh 실행 여부, run.sh URL 재확인</span></div>
+            <div class="htrow err"><span class="htcol-k">추천종목 0개</span><span class="htcol-v">⚙ 설정 파라미터를 완화 (para14↓, para15↓)</span></div>
+            <div class="htrow err"><span class="htcol-k">URL 만료</span><span class="htcol-v">run.sh 재실행 후 새 URL을 설정에 입력</span></div>
+          </div>
+        </div>
+
+        <div class="help-footer">
+          Mac: <code>/Users/jj/ai_sample/stock_cjj/stock_app/backend/</code><br>
+          앱: <a href="https://stock-analysis-cjj.netlify.app" target="_blank">stock-analysis-cjj.netlify.app</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div id="loading-text" class="loading-text">분석 중...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   주식분석 대시보드 — App Logic
+   ============================================================ */
+
+// ─── State ───────────────────────────────────────────────────
+const state = {
+  apiUrl: localStorage.getItem('apiUrl') || '',
+  data: null,
+  defaults: null,
+  charts: {},
+  pollTimer: null,
+  serverOnline: false,
+};
+
+// ─── API helpers ─────────────────────────────────────────────
+function isNetworkErr(e) {
+  return e instanceof TypeError || e.message === 'Failed to fetch' || e.message.includes('fetch') || e.message.includes('Network');
+}
+
+async function api(path, opts = {}) {
+  if (!state.apiUrl) throw new Error('NO_URL');
+  let res;
+  try {
+    res = await fetch(state.apiUrl + path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts,
+    });
+  } catch (e) {
+    // 네트워크 오류 (서버 꺼짐, 잘못된 URL, CORS 등)
+    throw new Error('NET_ERR');
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const urlInput = document.getElementById('api-url');
+  if (state.apiUrl) urlInput.value = state.apiUrl;
+
+  if (!state.apiUrl) {
+    showConnectionGuide();
+    renderSettingsForms();
+    return;
+  }
+
+  await checkServerStatus();
+  await loadDefaults();
+  await Promise.all([loadResults(), refreshCollectStatus()]);
+  renderSettingsForms();
+  startStatusPolling();
+});
+
+// ─── Tab navigation ──────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  document.querySelector(`.nav-btn[data-tab="${name}"]`).classList.add('active');
+  if (name === 'market' && state.data) renderCharts(state.data);
+  if (name === 'stocks' && state.data) renderStockTable();
+  if (name === 'settings') loadDbStatus();
+}
+
+// ─── Server status ────────────────────────────────────────────
+async function checkServerStatus() {
+  const dot = document.getElementById('db-status-dot');
+  try {
+    await api('/api/health');
+    state.serverOnline = true;
+    dot.className = 'status-dot online';
+    dot.title = '서버 연결됨';
+  } catch {
+    state.serverOnline = false;
+    dot.className = 'status-dot offline';
+    dot.title = '서버 연결 실패';
+  }
+}
+
+// ─── Defaults ────────────────────────────────────────────────
+const FALLBACK_DEFAULTS = {
+  weights: { 기간1: 0.2, 기간2: 0.2, 기간3: 0.2, 기간4: 0.2, 기간5: 0.1, 기간6: 0.1 },
+  periods: { 기간1: 15, 기간2: 30, 기간3: 2, 기간4: 3, 기간5: 6, 기간6: 1 },
+  params: {
+    para1: 0, para2: 0, para3: 0, para4: 1, para5: 1000,
+    para6: 20000, para7: 300000, para8: 20000, para9: 300000,
+    para10: 0, para11: 0, para12: 0, para13: 0, para14: 250,
+    para15: 20000, para16: 300000, para17: -50
+  }
+};
+
+async function loadDefaults() {
+  try {
+    state.defaults = await api('/api/defaults');
+  } catch {
+    state.defaults = FALLBACK_DEFAULTS;
+  }
+}
+
+// ─── Settings ────────────────────────────────────────────────
+function loadSettings() {
+  const saved = localStorage.getItem('analysisSettings');
+  if (saved) { try { return JSON.parse(saved); } catch {} }
+  return null;
+}
+
+function saveApiUrl() {
+  const raw = document.getElementById('api-url').value.trim().replace(/\/$/, '');
+  if (!raw) { toast('URL을 입력해 주세요', true); return; }
+  state.apiUrl = raw;
+  localStorage.setItem('apiUrl', raw);
+  testConnection();
+}
+
+async function testConnection() {
+  const el = document.getElementById('api-test-result');
+  el.textContent = '연결 확인 중...';
+  el.className = 'api-test-result';
+  try {
+    const res = await api('/api/health');
+    state.serverOnline = true;
+    el.textContent = `✓ 연결 성공 (${res.time?.slice(11, 19) || 'ok'})`;
+    el.className = 'api-test-result ok';
+    document.getElementById('db-status-dot').className = 'status-dot online';
+    // 연결 성공하면 결과 로드 시도
+    await loadDefaults();
+    await loadResults();
+    renderSettingsForms();
+    startStatusPolling();
+  } catch (e) {
+    state.serverOnline = false;
+    el.className = 'api-test-result err';
+    if (e.message === 'NET_ERR') {
+      el.textContent = '✗ 서버에 연결할 수 없습니다. Mac에서 run.sh를 실행했는지, URL이 맞는지 확인하세요.';
+    } else if (e.message === 'NO_URL') {
+      el.textContent = '✗ URL을 입력해 주세요.';
+    } else {
+      el.textContent = `✗ 오류: ${e.message}`;
+    }
+    document.getElementById('db-status-dot').className = 'status-dot offline';
+  }
+}
+
+function renderSettingsForms() {
+  const defaults = state.defaults || FALLBACK_DEFAULTS;
+  const saved = loadSettings() || {};
+
+  renderForm('weights-form', saved.weights || defaults.weights, '가중치', k => `${k} 가중치`);
+  renderForm('periods-form', saved.periods || defaults.periods, '기간', k => `${k} 기간`);
+
+  const paramLabels = {
+    para1:'단기 최소', para2:'장기 최소', para3:'단기장기차이 최소', para4:'외국인소진 최소',
+    para5:'전체순위 최소', para6:'초반평균가 최소', para7:'초반평균가 최대', para8:'후반평균가 최소',
+    para9:'후반평균가 최대', para10:'초반산포 최소', para11:'후반산포 최소', para12:'회귀선 최소',
+    para13:'목표주가 최소', para14:'종목기간 최소', para15:'종가 최소', para16:'종가 최대', para17:'영업이익 최소'
+  };
+  renderForm('params-form', saved.params || defaults.params, '파라미터', k => paramLabels[k] || k);
+}
+
+function renderForm(containerId, data, type, labelFn) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = Object.entries(data).map(([k, v]) => `
+    <div class="setting-field">
+      <label>${labelFn(k)}</label>
+      <input type="number" step="any" id="${type}_${k}" value="${v}" oninput="saveCurrentSettings()">
+    </div>
+  `).join('');
+}
+
+function saveCurrentSettings() {
+  const defaults = state.defaults || FALLBACK_DEFAULTS;
+  const collectForm = (data, type) => {
+    const result = {};
+    Object.keys(data).forEach(k => {
+      const el = document.getElementById(`${type}_${k}`);
+      if (el) result[k] = parseFloat(el.value) || 0;
+    });
+    return result;
+  };
+  localStorage.setItem('analysisSettings', JSON.stringify({
+    weights: collectForm(defaults.weights, '가중치'),
+    periods: collectForm(defaults.periods, '기간'),
+    params: collectForm(defaults.params, '파라미터'),
+  }));
+}
+
+function resetSettings() {
+  localStorage.removeItem('analysisSettings');
+  renderSettingsForms();
+  toast('설정이 기본값으로 초기화되었습니다');
+}
+
+async function loadDbStatus() {
+  const container = document.getElementById('db-info');
+  container.innerHTML = '<div class="loading-text">로딩 중...</div>';
+  try {
+    const db = await api('/api/db-status');
+    if (!db.connected) {
+      container.innerHTML = `<div style="color:var(--red);grid-column:1/-1">DB 연결 실패: ${db.error}</div>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="db-info-item"><div class="db-info-value">${(db.company_count || 0).toLocaleString()}</div><div class="db-info-label">등록 종목수</div></div>
+      <div class="db-info-item"><div class="db-info-value">${(db.price_count || 0).toLocaleString()}</div><div class="db-info-label">가격 데이터</div></div>
+      <div class="db-info-item" style="grid-column:1/-1"><div class="db-info-value" style="font-size:14px">${db.last_update || '-'}</div><div class="db-info-label">최근 업데이트</div></div>
+    `;
+  } catch (e) {
+    const msg = e.message === 'NET_ERR' ? '서버에 연결할 수 없습니다' : e.message === 'NO_URL' ? 'API URL을 먼저 설정하세요' : e.message;
+    container.innerHTML = `<div style="color:var(--red);grid-column:1/-1">오류: ${msg}</div>`;
+  }
+}
+
+// ─── Data Collection ─────────────────────────────────────────
+async function collectData() {
+  if (!state.apiUrl) { toast('먼저 ⚙ 설정에서 API 서버 URL을 입력하세요', true); showTab('settings'); return; }
+  try {
+    await api('/api/collect', { method: 'POST' });
+    document.getElementById('collect-btn').disabled = true;
+    document.getElementById('collect-progress').classList.remove('hidden');
+    document.getElementById('collect-progress').textContent = '수집 시작...';
+    pollCollect();
+  } catch (e) {
+    if (e.message.includes('이미 실행')) { pollCollect(); return; }
+    toast('오류: ' + (e.message === 'NET_ERR' ? '서버 연결 실패' : e.message), true);
+  }
+}
+
+async function refreshCollectStatus() {
+  try {
+    const s = await api('/api/collect-status');
+    const timeEl = document.getElementById('collect-time-text');
+    const progEl = document.getElementById('collect-progress');
+    if (s.running) {
+      timeEl.textContent = s.progress || '수집 중...';
+      progEl.classList.remove('hidden');
+      progEl.textContent = s.progress || '';
+      document.getElementById('collect-btn').disabled = true;
+    } else {
+      document.getElementById('collect-btn').disabled = false;
+      progEl.classList.add('hidden');
+      if (s.cache_time) {
+        timeEl.textContent = `마지막 수집: ${s.cache_time.slice(0,16).replace('T',' ')}`;
+      } else {
+        timeEl.textContent = '재무데이터 미수집';
+      }
+      if (s.error) toast('수집 오류: ' + s.error, true);
+    }
+  } catch {}
+}
+
+async function pollCollect() {
+  const poll = async () => {
+    try {
+      const s = await api('/api/collect-status');
+      const progEl = document.getElementById('collect-progress');
+      progEl.textContent = s.progress || '수집 중...';
+      document.getElementById('collect-time-text').textContent = s.progress || '수집 중...';
+      if (s.running) {
+        setTimeout(poll, 3000);
+      } else {
+        document.getElementById('collect-btn').disabled = false;
+        progEl.classList.add('hidden');
+        await refreshCollectStatus();
+        if (s.error) toast('수집 오류: ' + s.error, true);
+        else toast('데이터 수집 완료! 이제 분석 실행을 눌러주세요.');
+      }
+    } catch { setTimeout(poll, 5000); }
+  };
+  setTimeout(poll, 2000);
+}
+
+// ─── Analysis ────────────────────────────────────────────────
+async function runAnalysis() {
+  if (!state.apiUrl) {
+    toast('먼저 ⚙ 설정에서 API 서버 URL을 입력하세요', true);
+    showTab('settings');
+    return;
+  }
+  const settings = loadSettings() || {};
+  const defaults = state.defaults || FALLBACK_DEFAULTS;
+  const body = {
+    weights: settings.weights || defaults.weights,
+    periods: settings.periods || defaults.periods,
+    params: settings.params || defaults.params,
+    date_range: 5,
+    set_range: 60,
+    filter_rule: '기간1',
+  };
+  try {
+    await api('/api/analyze', { method: 'POST', body: JSON.stringify(body) });
+    showLoading('분석 시작...');
+    pollAnalysis();
+  } catch (e) {
+    if (e.message.includes('이미 실행')) {
+      showLoading('분석 중...');
+      pollAnalysis();
+    } else if (e.message === 'NET_ERR') {
+      showNoDataGuide('NET_ERR');
+    } else if (e.message === 'NO_URL') {
+      showNoDataGuide('NO_URL');
+    } else {
+      toast('오류: ' + e.message, true);
+    }
+  }
+}
+
+function startStatusPolling() {
+  setTimeout(checkAnalysisStatus, 2000);
+  setInterval(refreshCollectStatus, 10000);
+}
+
+async function checkAnalysisStatus() {
+  try {
+    const s = await api('/api/status');
+    if (s.running) {
+      document.getElementById('progress-bar').classList.remove('hidden');
+    } else {
+      document.getElementById('progress-bar').classList.add('hidden');
+      hideLoading();
+    }
+    if (s.last_run) {
+      document.getElementById('last-run-text').textContent = `마지막 분석: ${s.last_run.slice(0, 16).replace('T', ' ')}`;
+    }
+  } catch {}
+}
+
+async function pollAnalysis() {
+  const poll = async () => {
+    try {
+      const s = await api('/api/status');
+      document.getElementById('loading-text').textContent = s.progress || '분석 중...';
+      if (s.running) {
+        state.pollTimer = setTimeout(poll, 3000);
+      } else {
+        hideLoading();
+        document.getElementById('progress-bar').classList.add('hidden');
+        if (s.error) {
+          toast('분석 오류: ' + s.error, true);
+        } else {
+          await loadResults();
+          toast('분석 완료!');
+        }
+      }
+    } catch {
+      state.pollTimer = setTimeout(poll, 5000);
+    }
+  };
+  state.pollTimer = setTimeout(poll, 2000);
+}
+
+// ─── Results ─────────────────────────────────────────────────
+async function loadResults() {
+  try {
+    const data = await api('/api/results');
+    state.data = data;
+    renderHome(data);
+    document.getElementById('no-data-guide').classList.add('hidden');
+    document.getElementById('home-data-section').classList.remove('hidden');
+    const activeTab = document.querySelector('.tab-content.active')?.id;
+    if (activeTab === 'tab-stocks') renderStockTable();
+    if (activeTab === 'tab-market') renderCharts(data);
+  } catch (e) {
+    if (e.message === 'NET_ERR') {
+      showNoDataGuide('NET_ERR');
+    } else if (e.message === 'NO_URL') {
+      showNoDataGuide('NO_URL');
+    } else {
+      // 404 = 분석 결과 없음 (정상 상태)
+      showNoDataGuide('NO_RESULT');
+    }
+  }
+}
+
+// ─── No-data / Connection guide ──────────────────────────────
+function showConnectionGuide() {
+  showNoDataGuide('NO_URL');
+}
+
+function showNoDataGuide(reason) {
+  document.getElementById('no-data-guide').classList.remove('hidden');
+  document.getElementById('home-data-section').classList.add('hidden');
+
+  const icon = document.getElementById('no-data-icon');
+  const title = document.getElementById('no-data-title');
+  const desc = document.getElementById('no-data-desc');
+  const actions = document.getElementById('no-data-actions');
+
+  if (reason === 'NO_URL') {
+    icon.textContent = '🔗';
+    title.textContent = 'API 서버 URL을 설정해 주세요';
+    desc.innerHTML = `
+      모바일에서 사용하려면 Mac에서 서버를 켜고<br>
+      외부 접속 URL을 아래 설정에서 입력해야 합니다.<br><br>
+      <strong>Mac 터미널에서 순서대로 실행:</strong>
+    `;
+    actions.innerHTML = `
+      <div class="guide-steps">
+        <div class="guide-step"><span class="guide-num">1</span><span>백엔드 서버 실행: <code>bash run.sh</code></span></div>
+        <div class="guide-step"><span class="guide-num">2</span><span>외부 터널 열기: <code>bash run.sh</code></span></div>
+        <div class="guide-step"><span class="guide-num">3</span><span>run.sh가 출력한 <code>https://xxxx.trycloudflare.com</code> URL 복사</span></div>
+      </div>
+      <button class="btn-primary full-width" onclick="showTab('settings')" style="margin-top:12px">⚙ 설정에서 URL 입력하기</button>
+    `;
+  } else if (reason === 'NET_ERR') {
+    icon.textContent = '📡';
+    title.textContent = '서버에 연결할 수 없습니다';
+    desc.innerHTML = `
+      현재 서버 URL: <strong style="color:var(--accent)">${state.apiUrl || '(미설정)'}</strong><br><br>
+      <strong>확인할 사항:</strong>
+    `;
+    actions.innerHTML = `
+      <div class="guide-steps">
+        <div class="guide-step"><span class="guide-num">①</span><span>Mac에서 <code>bash run.sh</code> 실행 중인지 확인</span></div>
+        <div class="guide-step"><span class="guide-num">②</span><span>Mac에서 <code>bash run.sh</code> 실행 후 Cloudflare URL 복사</span></div>
+        <div class="guide-step"><span class="guide-num">③</span><span>⚙ 설정 탭에서 URL을 Cloudflare 주소로 업데이트</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn-primary" style="flex:1" onclick="retryConnection()">🔄 재시도</button>
+        <button class="btn-secondary" style="flex:1" onclick="showTab('settings')">⚙ URL 변경</button>
+      </div>
+    `;
+  } else {
+    // NO_RESULT: 서버는 연결됐지만 분석 결과 없음
+    icon.textContent = '📊';
+    title.textContent = '분석 결과가 없습니다';
+    desc.innerHTML = `
+      서버에 연결되었습니다.<br>
+      "분석 실행" 버튼을 눌러 분석을 시작하세요.<br>
+      <span style="color:var(--text2);font-size:12px">(DB 수집이 완료된 후 실행하세요)</span>
+    `;
+    actions.innerHTML = `
+      <button class="btn-primary full-width" onclick="runAnalysis()">📈 분석 실행</button>
+    `;
+  }
+}
+
+async function retryConnection() {
+  await checkServerStatus();
+  await loadResults();
+}
+
+// ─── Home rendering ──────────────────────────────────────────
+function renderHome(data) {
+  const lastRun = data.timestamp?.slice(0, 16).replace('T', ' ');
+  document.getElementById('last-run-text').textContent = `마지막 분석: ${lastRun}`;
+
+  const badge = document.getElementById('stock-count-text');
+  badge.textContent = `추천 ${Math.max(data.choice1?.length || 0, data.choice2?.length || 0)}종목`;
+  badge.className = 'badge badge-green';
+
+  const inter = data.intersection || [];
+  document.getElementById('intersection-badge').textContent = `${inter.length}종목`;
+  document.getElementById('intersection-list').innerHTML = inter.length
+    ? inter.map(n => `<span class="stock-chip">${n}</span>`).join('')
+    : '<span style="color:var(--text2);font-size:12px">교집합 종목 없음</span>';
+
+  renderStockCards('choice1-list', data.choice1 || []);
+  renderStockCards('choice2-list', data.choice2 || []);
+}
+
+function renderStockCards(containerId, stocks) {
+  const container = document.getElementById(containerId);
+  if (!stocks.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>종목 없음</p></div>';
+    return;
+  }
+  container.innerHTML = stocks.slice(0, 20).map(s => {
+    const priceFormatted = Number(s['종가']).toLocaleString();
+    const target = Number(s['종가목표'] || 0);
+    const targetRatio = (target * 100).toFixed(1);
+    const isPos = target >= 0;
+    const rankChip = s['전체순위'] ? `<span class="metric-chip neutral">순위 ${s['전체순위']}</span>` : '';
+    const scoreChip = s['기간총점수'] !== undefined ? `<span class="metric-chip neutral">점수 ${s['기간총점수']}</span>` : '';
+    const posNeg = s['긍정부정'] !== undefined
+      ? `<span class="metric-chip ${Number(s['긍정부정']) >= 0 ? 'positive' : 'negative'}">긍부정 ${Number(s['긍정부정']).toFixed(1)}</span>`
+      : '';
+    const signal = s['매도매수'] !== undefined
+      ? `<span class="metric-chip ${Number(s['매도매수']) >= 3 ? 'positive' : Number(s['매도매수']) <= 1 ? 'negative' : 'neutral'}">신호 ${s['매도매수']}/4</span>`
+      : '';
+    return `
+      <div class="stock-card">
+        <div class="stock-card-header">
+          <div>
+            <div class="stock-name">${s['업체명'] || '-'}</div>
+            <div class="stock-code">${s['코드'] || ''}</div>
+          </div>
+          <div class="stock-price-block">
+            <div class="stock-price">₩${priceFormatted}</div>
+            <div class="stock-target">목표 <span class="ratio ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : ''}${targetRatio}%</span></div>
+          </div>
+        </div>
+        <div class="stock-metrics">${rankChip}${scoreChip}${posNeg}${signal}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── Stock Table ─────────────────────────────────────────────
+function renderStockTable() {
+  if (!state.data) {
+    document.getElementById('stock-table-container').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">📭</div><p>분석 결과가 없습니다</p></div>';
+    return;
+  }
+  const mode = document.getElementById('stock-filter-mode').value;
+  const search = document.getElementById('stock-search').value.toLowerCase();
+  let rows = state.data[mode] || [];
+  if (search) rows = rows.filter(r => (r['업체명'] || '').toLowerCase().includes(search) || (r['코드'] || '').includes(search));
+
+  const container = document.getElementById('stock-table-container');
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>검색 결과 없음</p></div>';
+    return;
+  }
+
+  const keys = Object.keys(rows[0]);
+  const numericKeys = ['종가', '목표주가', '종가목표', '전체순위', '기간총점수', '긍정부정', '매도매수', 'nb', 'ns', 'sb', 'ss', 'd_s'];
+  const colorKeys = { '종가목표': true, '긍정부정': true, '매도매수': true };
+
+  const thead = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
+  const tbody = rows.map(r => {
+    const cells = keys.map(k => {
+      const v = r[k];
+      let display = v ?? '-';
+      let cls = numericKeys.includes(k) ? 'num' : '';
+      if (colorKeys[k]) {
+        const n = Number(v);
+        if (!isNaN(n)) {
+          if (k === '매도매수') cls = 'num ' + (n >= 3 ? 'text-green' : n <= 1 ? 'text-red' : 'text-yellow');
+          else cls += n > 0 ? ' text-green' : n < 0 ? ' text-red' : '';
+        }
+      }
+      if (k === '종가' || k === '목표주가') display = Number(v).toLocaleString();
+      if (k === '종가목표') display = `${(Number(v) * 100).toFixed(1)}%`;
+      return `<td class="${cls.trim()}">${display}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  container.innerHTML = `<table class="data-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+// ─── Charts ──────────────────────────────────────────────────
+function renderCharts(data) {
+  renderDeclineChart(data.ratio || []);
+  renderMeanRateChart(data.mean_rate || []);
+}
+
+function destroyChart(id) {
+  if (state.charts[id]) { state.charts[id].destroy(); delete state.charts[id]; }
+}
+
+function renderDeclineChart(ratio) {
+  destroyChart('decline');
+  const canvas = document.getElementById('decline-chart');
+  if (!ratio.length) return;
+  const labels = ratio.map(r => r['index']?.slice(5) || r['index'] || '');
+  state.charts['decline'] = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: '전체', data: ratio.map(r => r['전|-1'] ?? null), borderColor: '#4f8ef7', tension: 0.3, fill: false, pointRadius: 2, borderWidth: 2 },
+      { label: '단기', data: ratio.map(r => r['단|-1'] ?? null), borderColor: '#2ecc71', tension: 0.3, fill: false, pointRadius: 2, borderWidth: 2 },
+      { label: '장기', data: ratio.map(r => r['장|-1'] ?? null), borderColor: '#e74c3c', tension: 0.3, fill: false, pointRadius: 2, borderWidth: 2 },
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#9090b0', font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { ticks: { color: '#9090b0', font: { size: 10 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#9090b0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+function renderMeanRateChart(meanRate) {
+  destroyChart('meanrate');
+  const canvas = document.getElementById('mean-rate-chart');
+  if (!meanRate.length) return;
+  const labels = meanRate.map(r => r['index']?.slice(5) || r['index'] || '');
+  const values = meanRate.map(r => r['상승하강평균'] ?? null);
+  state.charts['meanrate'] = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: [{
+      label: '상승하강평균 (%)',
+      data: values,
+      backgroundColor: values.map(v => v >= 0 ? 'rgba(46,204,113,0.5)' : 'rgba(231,76,60,0.5)'),
+      borderColor: values.map(v => v >= 0 ? '#2ecc71' : '#e74c3c'),
+      borderWidth: 1,
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { ticks: { color: '#9090b0', font: { size: 10 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#9090b0', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
+}
+
+// ─── Loading / Toast ──────────────────────────────────────────
+function showLoading(text = '분석 중...') {
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  document.getElementById('loading-text').textContent = text;
+  document.getElementById('analyze-btn').disabled = true;
+}
+
+function hideLoading() {
+  document.getElementById('loading-overlay').classList.add('hidden');
+  document.getElementById('analyze-btn').disabled = false;
+}
+
+// ─── Help Modal ───────────────────────────────────────────────
+function showHelp() {
+  document.getElementById('help-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function closeHelp(e) {
+  if (e && e.target !== document.getElementById('help-modal')) return;
+  document.getElementById('help-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+let toastTimer;
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = isError ? 'var(--red)' : 'var(--border)';
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3500);
+}
+
+</script>
+</body>
+</html>
