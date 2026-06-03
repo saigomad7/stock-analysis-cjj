@@ -364,7 +364,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       </div>
       <div class="header-actions">
         <span id="db-status-dot" class="status-dot" title="DB 상태"></span>
-        <button class="icon-btn" onclick="showHelp()" title="도움말">?</button>
         <button class="icon-btn" onclick="showTab('settings')" title="설정">⚙</button>
       </div>
     </div>
@@ -416,11 +415,22 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <div class="section-title">교집합 종목 <span id="intersection-badge" class="badge badge-gold"></span></div>
         <div id="intersection-list" class="stock-chips"></div>
 
-        <div class="section-title">📊 추천 종목 (기간1 기준)</div>
-        <div id="choice1-list" class="card-list"></div>
-
-        <div class="section-title">🏆 추천 종목 (순위 기준)</div>
-        <div id="choice2-list" class="card-list"></div>
+        <div class="filter-bar" style="margin-top:12px">
+          <select id="home-list-mode" onchange="renderHomeList()" class="select-sm">
+            <option value="choice1">📊 기간1 기준</option>
+            <option value="choice2">🏆 순위 기준</option>
+          </select>
+          <select id="home-sort-col" onchange="renderHomeList()" class="select-sm">
+            <option value="">정렬: 기본</option>
+            <option value="전체순위">전체순위↑</option>
+            <option value="기간총점수">기간총점수↓</option>
+            <option value="긍정부정">긍정부정↓</option>
+            <option value="종가목표">종가목표↓</option>
+            <option value="매도매수">매수신호↓</option>
+          </select>
+        </div>
+        <div class="section-title" id="home-list-title">📊 추천 종목 (기간1 기준)</div>
+        <div id="home-stock-list" class="card-list"></div>
       </div>
     </section>
 
@@ -433,8 +443,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <option value="filter1">필터 상세1</option>
           <option value="filter2">필터 상세2</option>
         </select>
-        <input id="stock-search" type="search" placeholder="종목명 검색..." oninput="renderStockTable()" class="search-input">
+        <select id="stock-sort-col" onchange="renderStockTable()" class="select-sm">
+          <option value="">정렬: 기본</option>
+          <option value="전체순위">전체순위↑</option>
+          <option value="기간총점수">기간총점수↓</option>
+          <option value="긍정부정">긍정부정↓</option>
+          <option value="종가목표">종가목표↓</option>
+          <option value="매도매수">신호↓</option>
+          <option value="종가">종가↓</option>
+        </select>
       </div>
+      <input id="stock-search" type="search" placeholder="종목명 검색..." oninput="renderStockTable()" class="search-input" style="margin:4px 0 8px;width:100%;box-sizing:border-box">
       <div id="stock-table-container" class="table-container"></div>
     </section>
 
@@ -459,202 +478,189 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <div class="manual-hero">
         <div class="manual-logo">📈</div>
         <div class="manual-hero-title">주식분석 대시보드</div>
-        <div class="manual-hero-sub">사용 가이드</div>
+        <div class="manual-hero-sub">사용법 · 분석 로직 가이드</div>
       </div>
 
-      <!-- 시스템 구성 -->
+      <!-- 매일 사용 순서 -->
       <div class="manual-section">
-        <div class="manual-section-title">🏗️ 시스템 구성</div>
-        <div class="manual-arch">
-          <div class="arch-row">
-            <div class="arch-box arch-db">🗄️ MariaDB<br><span>investar DB</span></div>
-            <div class="arch-arrow">→</div>
-            <div class="arch-box arch-api">⚡ FastAPI<br><span>Mac 백엔드</span></div>
-            <div class="arch-arrow">→</div>
-            <div class="arch-box arch-app">📱 이 앱<br><span>Netlify</span></div>
-          </div>
-          <div class="arch-note">데이터는 Mac에서 수집/분석, 결과만 앱에서 조회</div>
-        </div>
-      </div>
-
-      <!-- 최초 설정 -->
-      <div class="manual-section">
-        <div class="manual-section-title">🚀 최초 설정 (Mac에서 실행)</div>
+        <div class="manual-section-title">🚀 매일 사용 순서</div>
         <div class="manual-steps">
           <div class="manual-step">
             <div class="step-num">1</div>
             <div class="step-body">
-              <div class="step-title">DB 데이터 수집 <span class="step-badge">최초 1회</span></div>
-              <div class="step-desc">KRX 전체 종목(약 2,700개) + 네이버금융 시세 수집. 약 30분 소요.</div>
-              <div class="manual-code">cd stock_app/backend<br>python3 db_updater.py</div>
+              <div class="step-title">iPad → Mac 원격 접속 후 터미널 열기</div>
+              <div class="step-desc">Spotlight(Cmd+Space) → terminal 입력 → Enter</div>
             </div>
           </div>
           <div class="manual-step">
             <div class="step-num">2</div>
             <div class="step-body">
-              <div class="step-title">API 서버 실행</div>
-              <div class="step-desc">분석 엔진 서버를 시작합니다. Mac이 켜져 있는 동안 실행 유지.</div>
-              <div class="manual-code">bash run.sh</div>
+              <div class="step-title">서버+터널 한번에 시작</div>
+              <div class="manual-code">bash /Users/jj/ai_sample/stock_cjj/stock_app/backend/run.sh</div>
+              <div class="step-desc">MariaDB 확인 → FastAPI 서버 → Cloudflare 터널 순서로 자동 시작. 약 15초 소요.</div>
             </div>
           </div>
           <div class="manual-step">
             <div class="step-num">3</div>
             <div class="step-body">
-              <div class="step-title">외부 터널 열기 <span class="step-badge">모바일 접속 시</span></div>
-              <div class="step-desc">별도 터미널에서 실행. Cloudflare URL을 앱 설정에 입력.</div>
-              <div class="manual-code">bash run.sh</div>
+              <div class="step-title">출력된 URL을 앱 설정에 입력</div>
+              <div class="manual-code">예) https://xxxx-xxxx.trycloudflare.com</div>
+              <div class="step-desc">⚙ 설정 탭 → API 서버 URL → 붙여넣기 → 저장. URL은 run.sh 재시작마다 바뀜.</div>
             </div>
           </div>
           <div class="manual-step">
             <div class="step-num">4</div>
             <div class="step-body">
-              <div class="step-title">앱 서버 URL 설정</div>
-              <div class="step-desc">⚙ 설정 탭 → API 서버 URL → Cloudflare 주소 입력 후 저장.</div>
-              <div class="manual-code">예) https://xxxx.trycloudflare.com</div>
+              <div class="step-title">데이터 수집 (하루 1회)</div>
+              <div class="step-desc">홈 탭 → 📥 데이터 수집 → 수집 실행. 네이버금융에서 전 종목 재무정보를 가져와 캐시로 저장. 약 10~20분.</div>
+            </div>
+          </div>
+          <div class="manual-step">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <div class="step-title">분석 실행 (파라미터 바꾸며 반복 가능)</div>
+              <div class="step-desc">홈 탭 → 📈 분석 실행. 캐시된 재무 데이터 + DB 시세 사용 → 약 1~3분. 네이버 재크롤링 없음.</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 일별 운영 -->
-      <div class="manual-section">
-        <div class="manual-section-title">📅 일별 운영</div>
-        <div class="manual-steps">
-          <div class="manual-step">
-            <div class="step-num">①</div>
-            <div class="step-body">
-              <div class="step-title">매일 13시 — db_updater 자동 실행</div>
-              <div class="step-desc">최초 실행 후 다음 날 13시에 자동으로 시세를 업데이트합니다.</div>
-            </div>
-          </div>
-          <div class="manual-step">
-            <div class="step-num">②</div>
-            <div class="step-body">
-              <div class="step-title">앱에서 "분석 실행" 버튼 클릭</div>
-              <div class="step-desc">DB 데이터를 읽어 분석을 수행합니다. 네이버 재크롤링 없음.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 탭별 기능 -->
+      <!-- 화면별 기능 -->
       <div class="manual-section">
         <div class="manual-section-title">📱 화면별 기능</div>
-
         <div class="manual-card">
           <div class="manual-card-header">🏠 홈</div>
           <ul class="manual-list">
-            <li><strong>교집합 종목</strong> — 두 기준(기간1·순위)에 모두 해당하는 종목. 신뢰도 높음.</li>
-            <li><strong>추천 종목 (기간1 기준)</strong> — 단기(15일) 수익률 가중 스코어 상위 종목.</li>
-            <li><strong>추천 종목 (순위 기준)</strong> — 6개 기간 종합 순위 기준 상위 종목.</li>
-            <li><strong>종가목표</strong> — (목표주가 - 현재가) / 목표주가. 양수일수록 상승 여력 큼.</li>
-            <li><strong>신호 n/4</strong> — RSI·볼린저·OBV 기술적 지표 매수 신호 개수.</li>
+            <li><strong>교집합 종목</strong> — 기간1 기준과 순위 기준 두 결과에 모두 등장한 종목. 신뢰도 가장 높음.</li>
+            <li><strong>기준 선택</strong> — 📊 기간1 기준(단기 가중) / 🏆 순위 기준(종합) 전환 가능.</li>
+            <li><strong>정렬</strong> — 전체순위·기간총점수·긍정부정·종가목표·매수신호 기준 정렬.</li>
           </ul>
         </div>
-
         <div class="manual-card">
           <div class="manual-card-header">📋 종목</div>
           <ul class="manual-list">
-            <li><strong>기간1 기준</strong> — 최종 추천 종목 (단기 가중).</li>
-            <li><strong>순위 기준</strong> — 최종 추천 종목 (종합 순위).</li>
-            <li><strong>필터 상세1/2</strong> — 필터 통과 종목 전체. 종가·목표주가·회귀선 포함.</li>
-            <li>종목명으로 실시간 검색 가능.</li>
+            <li><strong>기간1/순위 기준</strong> — 최종 추천 종목 상세 테이블.</li>
+            <li><strong>필터 상세1/2</strong> — 모든 필터 통과 종목 전체 (추천 전 단계).</li>
+            <li><strong>정렬</strong> — 컬럼 기준 정렬 선택 가능.</li>
+            <li>종목명·종목코드로 실시간 검색.</li>
           </ul>
         </div>
-
         <div class="manual-card">
           <div class="manual-card-header">📊 시장</div>
           <ul class="manual-list">
-            <li><strong>하락 수준 추이</strong> — 전체/단기추천/장기추천 종목 중 하락한 비율(%). 80% 이상이면 시장 과매도 구간.</li>
+            <li><strong>하락 수준 추이</strong> — 전체/단기추천/장기추천 종목 중 하락 비율(%). 80% 이상이면 과매도 구간.</li>
             <li><strong>상승하강 평균</strong> — 전체 종목의 일별 평균 등락률. -1.5% 이하면 급락 구간.</li>
           </ul>
         </div>
-
         <div class="manual-card">
           <div class="manual-card-header">⚙️ 설정</div>
           <ul class="manual-list">
-            <li><strong>API 서버 URL</strong> — Mac 백엔드 주소 (Cloudflare URL).</li>
-            <li><strong>기간별 가중치</strong> — 스코어 계산 시 각 기간의 비중. 합계가 1이 되도록.</li>
-            <li><strong>분석 기간</strong> — 기간1~4는 일/월 단위, 기간5~6은 월/년 단위.</li>
-            <li><strong>필터 파라미터</strong> — 종목 필터 조건. 값을 0으로 하면 해당 조건 비활성.</li>
+            <li><strong>API 서버 URL</strong> — run.sh가 출력하는 Cloudflare 주소. 재시작마다 업데이트 필요.</li>
+            <li><strong>기간별 가중치</strong> — 스코어 계산 시 각 기간의 비중 (합계 1.0 권장).</li>
+            <li><strong>분석 기간</strong> — 기간1~2: 일 단위, 기간3~5: 월 단위, 기간6: 년 단위.</li>
+            <li><strong>필터 파라미터</strong> — para1~17. 0으로 설정 시 해당 조건 비활성.</li>
           </ul>
         </div>
       </div>
 
-      <!-- 분석 지표 -->
+      <!-- 분석 로직 -->
       <div class="manual-section">
-        <div class="manual-section-title">📐 분석 지표 설명</div>
+        <div class="manual-section-title">🧠 분석 로직</div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">STEP 1 — 종목 필터링</div>
+          <ul class="manual-list">
+            <li>KRX 전체 ~2,700 종목에서 거래량 10만주 이상 종목만 추출.</li>
+            <li>종가 범위(para15~16), 영업이익(para17), 외국인소진(para4) 조건으로 필터.</li>
+            <li>상장 거래일 수(para14 = 80일 이상) 조건으로 신규상장 제외.</li>
+          </ul>
+        </div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">STEP 2 — 6개 기간 수익률 계산</div>
+          <ul class="manual-list">
+            <li>각 기간(기간1~6)의 초반 n일 평균 vs 최근 n일 평균을 비교한 변화율(%).</li>
+            <li>기간1(15일)·기간2(30일): 단기 / 기간3(2개월)·기간4(3개월): 중기 / 기간5(6개월)·기간6(1년): 장기.</li>
+            <li>가중치(기간1~4: 0.2, 기간5~6: 0.1)를 곱해 통합 스코어 산출.</li>
+          </ul>
+        </div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">STEP 3 — 기술적 지표</div>
+          <ul class="manual-list">
+            <li><strong>RSI</strong> — 14일 상대강도지수. 과매도(≤30) / 과매수(≥70) 신호 비율 계산.</li>
+            <li><strong>볼린저밴드</strong> — 14일 이동평균 ± 2σ. 하단 이탈(매수신호) / 상단 이탈(매도신호) 횟수.</li>
+            <li><strong>OBV</strong> — 거래량 기반 매수·매도 압력. 강한 매수(거래량 200만주↑) 따로 집계.</li>
+            <li><strong>선형회귀</strong> — 최근 n일 종가에 LinearRegression 적용. 기울기 양수 = 우상향 추세.</li>
+          </ul>
+        </div>
+
+        <div class="manual-card">
+          <div class="manual-card-header">STEP 4 — 최종 스코어 및 필터</div>
+          <ul class="manual-list">
+            <li>6기간 가중합 스코어를 0~100점으로 정규화. 순위(total_rank) 함께 산출.</li>
+            <li>목표주가 있는 종목만 통과(네이버 재무 캐시 기준).</li>
+            <li>긍정부정: 최근 60일 상승/하락일에 지수 가중치 적용한 차이값. 양수=상승 우세.</li>
+            <li>기간1 가중 스코어 기준 결과 + 종합순위 기준 결과 두 벌 동시 산출. 교집합이 핵심.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 지표 해석표 -->
+      <div class="manual-section">
+        <div class="manual-section-title">📐 지표 해석</div>
         <div class="manual-table-wrap">
           <table class="manual-table">
-            <thead><tr><th>지표</th><th>설명</th><th>해석</th></tr></thead>
+            <thead><tr><th>지표</th><th>좋은 신호</th><th>나쁜 신호</th></tr></thead>
             <tbody>
-              <tr><td>기간1~6</td><td>기간별 초반/후반 평균 가격 변화율</td><td>양수 = 상승 중</td></tr>
-              <tr><td>회귀선</td><td>최근 n일 종가의 선형회귀 기울기</td><td>양수 = 우상향 추세</td></tr>
-              <tr><td>RSI</td><td>14일 기준 상대강도지수</td><td>30 이하 과매도, 70 이상 과매수</td></tr>
-              <tr><td>볼린저밴드</td><td>이동평균 ± 2σ 밴드 이탈 횟수</td><td>하단 이탈 많으면 매수 신호</td></tr>
-              <tr><td>OBV</td><td>거래량 기반 매수/매도 압력</td><td>매수 > 매도면 상승 압력</td></tr>
-              <tr><td>긍정부정</td><td>최근 60일 가중 상승/하락일 차이</td><td>양수 = 최근 상승 우세</td></tr>
-              <tr><td>종가목표</td><td>(목표주가 - 종가) / 목표주가</td><td>양수이고 클수록 상승 여력 큼</td></tr>
-              <tr><td>외국인소진</td><td>외국인 보유 비율 (%)</td><td>높을수록 외국인 선호 종목</td></tr>
+              <tr><td>기간1~6</td><td>양수 (상승 중)</td><td>음수 (하락 중)</td></tr>
+              <tr><td>회귀선</td><td>양수 (우상향)</td><td>음수 (하락 추세)</td></tr>
+              <tr><td>긍정부정</td><td>높을수록 상승 우세</td><td>음수 = 하락 우세</td></tr>
+              <tr><td>종가목표</td><td>양수 큼 = 상승 여력 큼</td><td>0 이하 = 고평가</td></tr>
+              <tr><td>신호 n/4</td><td>3~4 = 매수 신호 강함</td><td>0~1 = 신호 약함</td></tr>
+              <tr><td>RSI</td><td>rsi_lo 높음 = 과매도 후 반등 가능</td><td>rsi_up 높음 = 과매수</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- 기본 파라미터 -->
+      <!-- 파라미터 -->
       <div class="manual-section">
-        <div class="manual-section-title">🎛️ 기본 파라미터 값</div>
+        <div class="manual-section-title">🎛️ 핵심 파라미터</div>
         <div class="manual-table-wrap">
           <table class="manual-table">
             <thead><tr><th>파라미터</th><th>기본값</th><th>의미</th></tr></thead>
             <tbody>
-              <tr><td>종가 범위</td><td>2만 ~ 30만원</td><td>분석 대상 종가 구간</td></tr>
-              <tr><td>거래량 필터</td><td>10만주 이상</td><td>평균 거래량 하한</td></tr>
-              <tr><td>종목 기간</td><td>250일 이상</td><td>상장 후 최소 거래 기간</td></tr>
-              <tr><td>외국인소진</td><td>1% 이상</td><td>외국인 보유 최소 비율</td></tr>
-              <tr><td>영업이익</td><td>-50억 이상</td><td>극심한 적자 종목 제외</td></tr>
-              <tr><td>가중치</td><td>기간1~4: 0.2 / 기간5~6: 0.1</td><td>단기 비중 높게</td></tr>
+              <tr><td>para1</td><td>0</td><td>기간1 최소값 (0 = 제한 없음)</td></tr>
+              <tr><td>para4</td><td>1</td><td>외국인소진 최소 1%</td></tr>
+              <tr><td>para5</td><td>1000</td><td>전체순위 최소값 (낮을수록 상위)</td></tr>
+              <tr><td>para14</td><td>80</td><td>최소 상장 거래일 (DB 최대 100일)</td></tr>
+              <tr><td>para15~16</td><td>2만~30만</td><td>종가 범위</td></tr>
+              <tr><td>para17</td><td>-50</td><td>영업이익 최소 -50억</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- 파일 구조 -->
+      <!-- 자주 묻는 문제 -->
       <div class="manual-section">
-        <div class="manual-section-title">📁 파일 구조</div>
-        <div class="manual-code manual-code-block">stock_app/
-├── backend/
-│   ├── analysis.py     분석 엔진 (RSI/BB/OBV/스코어)
-│   ├── main.py         FastAPI 서버 (REST API)
-│   ├── db_updater.py   KRX+네이버 크롤러 (일별 실행)
-│   ├── run.sh          서버+터널 한번에 실행
-│   └── stop.sh         서버+터널 종료
-└── frontend/           (Netlify 배포)
-    ├── index.html
-    ├── css/style.css
-    └── js/app.js</div>
-      </div>
-
-      <!-- API 엔드포인트 -->
-      <div class="manual-section">
-        <div class="manual-section-title">🔌 API 엔드포인트</div>
+        <div class="manual-section-title">⚠️ 자주 발생하는 문제</div>
         <div class="manual-table-wrap">
           <table class="manual-table">
-            <thead><tr><th>엔드포인트</th><th>설명</th></tr></thead>
+            <thead><tr><th>증상</th><th>원인 및 해결</th></tr></thead>
             <tbody>
-              <tr><td>GET /api/health</td><td>서버 상태 확인</td></tr>
-              <tr><td>GET /api/db-status</td><td>DB 연결 및 데이터 현황</td></tr>
-              <tr><td>POST /api/analyze</td><td>분석 실행 (백그라운드)</td></tr>
-              <tr><td>GET /api/status</td><td>분석 진행 상태 조회</td></tr>
-              <tr><td>GET /api/results</td><td>분석 결과 조회 (캐시)</td></tr>
-              <tr><td>GET /api/defaults</td><td>기본 파라미터 조회</td></tr>
+              <tr><td>서버 연결 실패</td><td>run.sh 실행 여부 확인. URL이 바뀌었으면 설정에서 업데이트.</td></tr>
+              <tr><td>추천종목 0개</td><td>para14↓(60), para15↓(10000), para5↑(2000)으로 완화.</td></tr>
+              <tr><td>URL 만료</td><td>run.sh 재시작 후 새 trycloudflare.com 주소를 설정에 입력.</td></tr>
+              <tr><td>분석 오래 걸림</td><td>재무 캐시 없으면 느림. 먼저 📥 데이터 수집 1회 실행 후 분석.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
       <div class="manual-footer">
-        Built with FastAPI · MariaDB · Chart.js · Netlify
+        FastAPI · MariaDB · Cloudflare Tunnel · GitHub Pages<br>
+        앱: <a href="https://saigomad7.github.io/stock-analysis-cjj/" target="_blank" style="color:var(--accent)">saigomad7.github.io/stock-analysis-cjj</a>
       </div>
     </section>
 
@@ -717,85 +723,6 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </button>
   </nav>
 
-  <!-- Help Modal -->
-  <div id="help-modal" class="modal-overlay hidden" onclick="closeHelp(event)">
-    <div class="modal-box" id="help-modal-box">
-      <div class="modal-header">
-        <span class="modal-title">📖 사용 가이드</span>
-        <button class="modal-close" onclick="closeHelp()">✕</button>
-      </div>
-      <div class="modal-body">
-
-        <div class="help-section">
-          <div class="help-section-title">🏗️ 시스템 구성</div>
-          <div class="help-arch">
-            <span class="arch-pill arch-db">🗄️ MariaDB</span>
-            <span class="arch-arr">→</span>
-            <span class="arch-pill arch-api">⚡ FastAPI (Mac)</span>
-            <span class="arch-arr">→</span>
-            <span class="arch-pill arch-app">📱 이 앱</span>
-          </div>
-          <p class="help-note">분석 엔진은 Mac에서 실행, 결과를 앱에서 조회</p>
-        </div>
-
-        <div class="help-section">
-          <div class="help-section-title">🚀 매일 사용 순서</div>
-          <div class="help-steps">
-            <div class="help-step"><span class="hstep-num">1</span><div><strong>Mac 터미널:</strong> <code>bash run.sh</code> 실행 (서버 유지)</div></div>
-            <div class="help-step"><span class="hstep-num">2</span><div><strong>Mac 터미널 새 탭:</strong> <code>bash run.sh</code> 실행</div></div>
-            <div class="help-step"><span class="hstep-num">3</span><div>출력된 <code>https://xxxx.trycloudflare.com</code> 주소를 ⚙ 설정 → API URL에 입력</div></div>
-            <div class="help-step"><span class="hstep-num">4</span><div><strong>홈 탭 → 📥 데이터 수집</strong> (하루 1회, 재무정보 캐싱)</div></div>
-            <div class="help-step"><span class="hstep-num">5</span><div><strong>홈 탭 → 📈 분석 실행</strong> (파라미터 바꾸며 반복 가능)</div></div>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <div class="help-section-title">📱 화면별 기능</div>
-          <div class="help-table">
-            <div class="htrow"><span class="htcol-k">🏠 홈</span><span class="htcol-v">교집합 추천종목, 기간1/순위 기준 추천 카드</span></div>
-            <div class="htrow"><span class="htcol-k">📋 종목</span><span class="htcol-v">전체 필터링 결과 테이블 + 종목명 검색</span></div>
-            <div class="htrow"><span class="htcol-k">📊 시장</span><span class="htcol-v">하락추이 차트, 상승하강 평균 차트</span></div>
-            <div class="htrow"><span class="htcol-k">⚙ 설정</span><span class="htcol-v">API URL, 가중치·기간·파라미터 조정</span></div>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <div class="help-section-title">📐 주요 지표</div>
-          <div class="help-table">
-            <div class="htrow"><span class="htcol-k">교집합</span><span class="htcol-v">두 기준 모두 해당 → 신뢰도 높음</span></div>
-            <div class="htrow"><span class="htcol-k">종가목표</span><span class="htcol-v">(목표주가-현재가)/목표주가, 양수=상승여력</span></div>
-            <div class="htrow"><span class="htcol-k">신호 n/4</span><span class="htcol-v">RSI·볼린저·OBV 매수신호 합계</span></div>
-            <div class="htrow"><span class="htcol-k">긍부정</span><span class="htcol-v">최근 상승일·하락일 가중 차이 (양수=상승우세)</span></div>
-            <div class="htrow"><span class="htcol-k">회귀선</span><span class="htcol-v">최근 추세 기울기 (양수=우상향)</span></div>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <div class="help-section-title">🎛️ 핵심 파라미터</div>
-          <div class="help-table">
-            <div class="htrow"><span class="htcol-k">종가 범위</span><span class="htcol-v">para15(최소) ~ para16(최대), 기본 2만~30만</span></div>
-            <div class="htrow"><span class="htcol-k">영업이익</span><span class="htcol-v">para17, 기본 -50억 이상 (극적자 제외)</span></div>
-            <div class="htrow"><span class="htcol-k">종목기간</span><span class="htcol-v">para14, 기본 80일 (DB 보유 거래일 수)</span></div>
-            <div class="htrow"><span class="htcol-k">외국인소진</span><span class="htcol-v">para4, 기본 1% 이상</span></div>
-          </div>
-        </div>
-
-        <div class="help-section">
-          <div class="help-section-title">⚠️ 자주 발생하는 문제</div>
-          <div class="help-table">
-            <div class="htrow err"><span class="htcol-k">서버 연결 실패</span><span class="htcol-v">run.sh 실행 여부, run.sh URL 재확인</span></div>
-            <div class="htrow err"><span class="htcol-k">추천종목 0개</span><span class="htcol-v">⚙ 설정 파라미터를 완화 (para14↓, para15↓)</span></div>
-            <div class="htrow err"><span class="htcol-k">URL 만료</span><span class="htcol-v">run.sh 재실행 후 새 URL을 설정에 입력</span></div>
-          </div>
-        </div>
-
-        <div class="help-footer">
-          Mac: <code>/Users/jj/ai_sample/stock_cjj/stock_app/backend/</code><br>
-          앱: <a href="https://stock-analysis-cjj.netlify.app" target="_blank">stock-analysis-cjj.netlify.app</a>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
@@ -1270,8 +1197,26 @@ function renderHome(data) {
     ? inter.map(n => `<span class="stock-chip">${n}</span>`).join('')
     : '<span style="color:var(--text2);font-size:12px">교집합 종목 없음</span>';
 
-  renderStockCards('choice1-list', data.choice1 || []);
-  renderStockCards('choice2-list', data.choice2 || []);
+  renderHomeList();
+}
+
+function renderHomeList() {
+  if (!state.data) return;
+  const mode = document.getElementById('home-list-mode').value;
+  const sortCol = document.getElementById('home-sort-col').value;
+  const titles = { choice1: '📊 추천 종목 (기간1 기준)', choice2: '🏆 추천 종목 (순위 기준)' };
+  document.getElementById('home-list-title').textContent = titles[mode] || '';
+
+  let stocks = [...(state.data[mode] || [])];
+  if (sortCol) {
+    const asc = sortCol === '전체순위';
+    stocks.sort((a, b) => {
+      const av = Number(a[sortCol]) || 0;
+      const bv = Number(b[sortCol]) || 0;
+      return asc ? av - bv : bv - av;
+    });
+  }
+  renderStockCards('home-stock-list', stocks);
 }
 
 function renderStockCards(containerId, stocks) {
@@ -1312,6 +1257,8 @@ function renderStockCards(containerId, stocks) {
 }
 
 // ─── Stock Table ─────────────────────────────────────────────
+const stockSort = { col: null, asc: true };
+
 function renderStockTable() {
   if (!state.data) {
     document.getElementById('stock-table-container').innerHTML =
@@ -1319,8 +1266,9 @@ function renderStockTable() {
     return;
   }
   const mode = document.getElementById('stock-filter-mode').value;
+  const sortSel = document.getElementById('stock-sort-col').value;
   const search = document.getElementById('stock-search').value.toLowerCase();
-  let rows = state.data[mode] || [];
+  let rows = [...(state.data[mode] || [])];
   if (search) rows = rows.filter(r => (r['업체명'] || '').toLowerCase().includes(search) || (r['코드'] || '').includes(search));
 
   const container = document.getElementById('stock-table-container');
@@ -1329,11 +1277,28 @@ function renderStockTable() {
     return;
   }
 
-  const keys = Object.keys(rows[0]);
   const numericKeys = ['종가', '목표주가', '종가목표', '전체순위', '기간총점수', '긍정부정', '매도매수', 'nb', 'ns', 'sb', 'ss', 'd_s'];
   const colorKeys = { '종가목표': true, '긍정부정': true, '매도매수': true };
 
-  const thead = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
+  // 정렬 적용 (select 선택 우선, 없으면 헤더 클릭 정렬)
+  const sortKey = sortSel || stockSort.col;
+  const sortAsc = sortSel ? sortSel === '전체순위' : stockSort.asc;
+  if (sortKey) {
+    rows.sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (numericKeys.includes(sortKey)) { av = Number(av) || 0; bv = Number(bv) || 0; }
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const keys = Object.keys(rows[0]);
+  const thead = `<tr>${keys.map(k => {
+    const icon = stockSort.col === k && !sortSel ? (stockSort.asc ? '▲' : '▼') : '';
+    return `<th onclick="clickStockSort('${k}')" style="cursor:pointer;user-select:none">${k}${icon ? ' ' + icon : ''}</th>`;
+  }).join('')}</tr>`;
+
   const tbody = rows.map(r => {
     const cells = keys.map(k => {
       const v = r[k];
@@ -1354,6 +1319,13 @@ function renderStockTable() {
   }).join('');
 
   container.innerHTML = `<table class="data-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+}
+
+function clickStockSort(col) {
+  document.getElementById('stock-sort-col').value = ''; // select 초기화
+  if (stockSort.col === col) stockSort.asc = !stockSort.asc;
+  else { stockSort.col = col; stockSort.asc = true; }
+  renderStockTable();
 }
 
 // ─── Charts ──────────────────────────────────────────────────
@@ -1425,17 +1397,6 @@ function showLoading(text = '분석 중...') {
 function hideLoading() {
   document.getElementById('loading-overlay').classList.add('hidden');
   document.getElementById('analyze-btn').disabled = false;
-}
-
-// ─── Help Modal ───────────────────────────────────────────────
-function showHelp() {
-  document.getElementById('help-modal').classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-function closeHelp(e) {
-  if (e && e.target !== document.getElementById('help-modal')) return;
-  document.getElementById('help-modal').classList.add('hidden');
-  document.body.style.overflow = '';
 }
 
 let toastTimer;
