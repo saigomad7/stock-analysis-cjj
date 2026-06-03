@@ -419,6 +419,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <select id="home-list-mode" onchange="renderHomeList()" class="select-sm">
             <option value="choice1">📊 기간1 기준</option>
             <option value="choice2">🏆 순위 기준</option>
+            <option value="filter1">📋 필터 상세1</option>
+            <option value="filter2">📋 필터 상세2</option>
           </select>
           <select id="home-sort-col" onchange="renderHomeList()" class="select-sm">
             <option value="">정렬: 기본</option>
@@ -1203,10 +1205,32 @@ function renderHome(data) {
 function renderHomeList() {
   if (!state.data) return;
   const mode = document.getElementById('home-list-mode').value;
-  const sortCol = document.getElementById('home-sort-col').value;
-  const titles = { choice1: '📊 추천 종목 (기간1 기준)', choice2: '🏆 추천 종목 (순위 기준)' };
+  const sortSel = document.getElementById('home-sort-col');
+
+  const isFilter = mode === 'filter1' || mode === 'filter2';
+  const titles = {
+    choice1: '📊 추천 종목 (기간1 기준)', choice2: '🏆 추천 종목 (순위 기준)',
+    filter1: '📋 필터 상세1 (전체 필터 통과 종목)', filter2: '📋 필터 상세2'
+  };
   document.getElementById('home-list-title').textContent = titles[mode] || '';
 
+  // 정렬 옵션을 데이터 종류에 맞게 교체
+  const prevVal = sortSel.value;
+  sortSel.innerHTML = isFilter
+    ? `<option value="">정렬: 기본</option>
+       <option value="회귀선">회귀선↓</option>
+       <option value="단기장기차이">단장차이↓</option>
+       <option value="종가">종가↓</option>
+       <option value="목표주가">목표주가↓</option>`
+    : `<option value="">정렬: 기본</option>
+       <option value="전체순위">전체순위↑</option>
+       <option value="기간총점수">기간총점수↓</option>
+       <option value="긍정부정">긍정부정↓</option>
+       <option value="종가목표">종가목표↓</option>
+       <option value="매도매수">매수신호↓</option>`;
+  sortSel.value = prevVal; // 가능하면 이전 값 유지
+
+  const sortCol = sortSel.value;
   let stocks = [...(state.data[mode] || [])];
   if (sortCol) {
     const asc = sortCol === '전체순위';
@@ -1225,32 +1249,43 @@ function renderStockCards(containerId, stocks) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>종목 없음</p></div>';
     return;
   }
-  container.innerHTML = stocks.slice(0, 20).map(s => {
+  container.innerHTML = stocks.slice(0, 30).map(s => {
+    const code = s['코드'] || '';
+    const naverUrl = `https://finance.naver.com/item/main.nhn?code=${code}`;
     const priceFormatted = Number(s['종가']).toLocaleString();
-    const target = Number(s['종가목표'] || 0);
-    const targetRatio = (target * 100).toFixed(1);
-    const isPos = target >= 0;
-    const rankChip = s['전체순위'] ? `<span class="metric-chip neutral">순위 ${s['전체순위']}</span>` : '';
-    const scoreChip = s['기간총점수'] !== undefined ? `<span class="metric-chip neutral">점수 ${s['기간총점수']}</span>` : '';
-    const posNeg = s['긍정부정'] !== undefined
-      ? `<span class="metric-chip ${Number(s['긍정부정']) >= 0 ? 'positive' : 'negative'}">긍부정 ${Number(s['긍정부정']).toFixed(1)}</span>`
-      : '';
-    const signal = s['매도매수'] !== undefined
-      ? `<span class="metric-chip ${Number(s['매도매수']) >= 3 ? 'positive' : Number(s['매도매수']) <= 1 ? 'negative' : 'neutral'}">신호 ${s['매도매수']}/4</span>`
-      : '';
+
+    // 종가목표: choice 데이터는 직접 보유, filter 데이터는 목표주가/종가로 계산
+    let targetRatio = null, isPos = true;
+    if (s['종가목표'] != null) {
+      targetRatio = (Number(s['종가목표']) * 100).toFixed(1);
+      isPos = Number(s['종가목표']) >= 0;
+    } else if (s['목표주가'] && Number(s['목표주가']) > 0) {
+      const tp = Number(s['목표주가']), cp = Number(s['종가']);
+      targetRatio = ((tp - cp) / tp * 100).toFixed(1);
+      isPos = Number(targetRatio) >= 0;
+    }
+
+    const chips = [];
+    if (s['전체순위'] != null)   chips.push(`<span class="metric-chip neutral">순위 ${s['전체순위']}</span>`);
+    if (s['기간총점수'] != null) chips.push(`<span class="metric-chip neutral">점수 ${s['기간총점수']}</span>`);
+    if (s['회귀선'] != null)     chips.push(`<span class="metric-chip ${Number(s['회귀선']) >= 0 ? 'positive' : 'negative'}">회귀 ${Number(s['회귀선']).toFixed(2)}</span>`);
+    if (s['단기장기차이'] != null) chips.push(`<span class="metric-chip ${Number(s['단기장기차이']) >= 0 ? 'positive' : 'negative'}">단장 ${Number(s['단기장기차이']).toFixed(1)}</span>`);
+    if (s['긍정부정'] != null)   chips.push(`<span class="metric-chip ${Number(s['긍정부정']) >= 0 ? 'positive' : 'negative'}">긍부정 ${Number(s['긍정부정']).toFixed(1)}</span>`);
+    if (s['매도매수'] != null)   chips.push(`<span class="metric-chip ${Number(s['매도매수']) >= 3 ? 'positive' : Number(s['매도매수']) <= 1 ? 'negative' : 'neutral'}">신호 ${s['매도매수']}/4</span>`);
+
     return `
-      <div class="stock-card">
+      <div class="stock-card" onclick="window.open('${naverUrl}','_blank')" style="cursor:pointer">
         <div class="stock-card-header">
           <div>
             <div class="stock-name">${s['업체명'] || '-'}</div>
-            <div class="stock-code">${s['코드'] || ''}</div>
+            <div class="stock-code">${code} <span style="font-size:10px;color:var(--accent);opacity:.7">↗ 네이버</span></div>
           </div>
           <div class="stock-price-block">
             <div class="stock-price">₩${priceFormatted}</div>
-            <div class="stock-target">목표 <span class="ratio ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : ''}${targetRatio}%</span></div>
+            ${targetRatio != null ? `<div class="stock-target">목표 <span class="ratio ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : ''}${targetRatio}%</span></div>` : ''}
           </div>
         </div>
-        <div class="stock-metrics">${rankChip}${scoreChip}${posNeg}${signal}</div>
+        <div class="stock-metrics">${chips.join('')}</div>
       </div>
     `;
   }).join('');
@@ -1300,6 +1335,8 @@ function renderStockTable() {
   }).join('')}</tr>`;
 
   const tbody = rows.map(r => {
+    const code = r['코드'] || '';
+    const naverUrl = `https://finance.naver.com/item/main.nhn?code=${code}`;
     const cells = keys.map(k => {
       const v = r[k];
       let display = v ?? '-';
@@ -1315,7 +1352,7 @@ function renderStockTable() {
       if (k === '종가목표') display = `${(Number(v) * 100).toFixed(1)}%`;
       return `<td class="${cls.trim()}">${display}</td>`;
     }).join('');
-    return `<tr>${cells}</tr>`;
+    return `<tr onclick="window.open('${naverUrl}','_blank')" style="cursor:pointer">${cells}</tr>`;
   }).join('');
 
   container.innerHTML = `<table class="data-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
