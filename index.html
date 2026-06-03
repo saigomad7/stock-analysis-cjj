@@ -439,13 +439,13 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <!-- 종목 탭 -->
     <section id="tab-stocks" class="tab-content">
       <div class="filter-bar">
-        <select id="stock-filter-mode" onchange="renderStockTable()" class="select-sm">
+        <select id="stock-filter-mode" onchange="onStockModeChange()" class="select-sm">
           <option value="choice1">기간1 기준</option>
           <option value="choice2">순위 기준</option>
           <option value="filter1">필터 상세1</option>
           <option value="filter2">필터 상세2</option>
         </select>
-        <select id="stock-sort-col" onchange="renderStockTable()" class="select-sm">
+        <select id="stock-sort-col" onchange="onStockSortChange()" class="select-sm">
           <option value="">정렬: 기본</option>
           <option value="전체순위">전체순위↑</option>
           <option value="기간총점수">기간총점수↓</option>
@@ -1294,6 +1294,35 @@ function renderStockCards(containerId, stocks) {
 // ─── Stock Table ─────────────────────────────────────────────
 const stockSort = { col: null, asc: true };
 
+const SORT_OPTS_CHOICE = `
+  <option value="">정렬: 기본</option>
+  <option value="전체순위">전체순위↑</option>
+  <option value="기간총점수">기간총점수↓</option>
+  <option value="긍정부정">긍정부정↓</option>
+  <option value="종가목표">종가목표↓</option>
+  <option value="매도매수">신호↓</option>
+  <option value="종가">종가↓</option>`;
+const SORT_OPTS_FILTER = `
+  <option value="">정렬: 기본</option>
+  <option value="회귀선">회귀선↓</option>
+  <option value="단기장기차이">단장차이↓</option>
+  <option value="종가">종가↓</option>
+  <option value="목표주가">목표주가↓</option>`;
+
+function onStockModeChange() {
+  const mode = document.getElementById('stock-filter-mode').value;
+  const sortSel = document.getElementById('stock-sort-col');
+  const isFilter = mode === 'filter1' || mode === 'filter2';
+  sortSel.innerHTML = isFilter ? SORT_OPTS_FILTER : SORT_OPTS_CHOICE;
+  stockSort.col = null; // 헤더 클릭 정렬 초기화
+  renderStockTable();
+}
+
+function onStockSortChange() {
+  stockSort.col = null; // dropdown 변경 시 헤더 클릭 정렬 초기화
+  renderStockTable();
+}
+
 function renderStockTable() {
   if (!state.data) {
     document.getElementById('stock-table-container').innerHTML =
@@ -1315,9 +1344,9 @@ function renderStockTable() {
   const numericKeys = ['종가', '목표주가', '종가목표', '전체순위', '기간총점수', '긍정부정', '매도매수', 'nb', 'ns', 'sb', 'ss', 'd_s'];
   const colorKeys = { '종가목표': true, '긍정부정': true, '매도매수': true };
 
-  // 정렬 적용 (select 선택 우선, 없으면 헤더 클릭 정렬)
-  const sortKey = sortSel || stockSort.col;
-  const sortAsc = sortSel ? sortSel === '전체순위' : stockSort.asc;
+  // dropdown 선택 우선, "" 이면 헤더클릭 정렬 사용
+  const sortKey = sortSel !== '' ? sortSel : stockSort.col;
+  const sortAsc = sortSel !== '' ? sortSel === '전체순위' : stockSort.asc;
   if (sortKey) {
     rows.sort((a, b) => {
       let av = a[sortKey], bv = b[sortKey];
