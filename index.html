@@ -419,8 +419,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <select id="home-list-mode" onchange="renderHomeList()" class="select-sm">
             <option value="choice1">📊 기간1 기준</option>
             <option value="choice2">🏆 순위 기준</option>
-            <option value="filter1">📋 필터 상세1</option>
-            <option value="filter2">📋 필터 상세2</option>
+            <option value="filter1">🎯 교집합 (두 기준 공통)</option>
+            <option value="filter2">🔗 합집합 (기간1 OR 순위)</option>
           </select>
           <select id="home-sort-col" onchange="renderHomeList()" class="select-sm">
             <option value="">정렬: 기본</option>
@@ -442,8 +442,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         <select id="stock-filter-mode" onchange="onStockModeChange()" class="select-sm">
           <option value="choice1">기간1 기준</option>
           <option value="choice2">순위 기준</option>
-          <option value="filter1">필터 상세1</option>
-          <option value="filter2">필터 상세2</option>
+          <option value="filter1">교집합 (두 기준 공통)</option>
+          <option value="filter2">합집합 (기간1 OR 순위)</option>
         </select>
         <select id="stock-sort-col" onchange="onStockSortChange()" class="select-sm">
           <option value="">정렬: 기본</option>
@@ -542,7 +542,8 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
           <div class="manual-card-header">📋 종목</div>
           <ul class="manual-list">
             <li><strong>기간1/순위 기준</strong> — 최종 추천 종목 상세 테이블.</li>
-            <li><strong>필터 상세1/2</strong> — 모든 필터 통과 종목 전체 (추천 전 단계).</li>
+            <li><strong>교집합</strong> — 기간1기준 top30 AND 순위기준 top30 동시 해당 종목.</li>
+            <li><strong>합집합</strong> — 기간1기준 top30 OR 순위기준 top30 해당 종목 전체.</li>
             <li><strong>정렬</strong> — 컬럼 기준 정렬 선택 가능.</li>
             <li>종목명·종목코드로 실시간 검색.</li>
           </ul>
@@ -1210,7 +1211,7 @@ function renderHomeList() {
   const isFilter = mode === 'filter1' || mode === 'filter2';
   const titles = {
     choice1: '📊 추천 종목 (기간1 기준)', choice2: '🏆 추천 종목 (순위 기준)',
-    filter1: '📋 필터 상세1 (전체 필터 통과 종목)', filter2: '📋 필터 상세2'
+    filter1: '🎯 교집합 — 두 기준 모두 top30', filter2: '🔗 합집합 — 기간1 OR 순위 top30'
   };
   document.getElementById('home-list-title').textContent = titles[mode] || '';
 
