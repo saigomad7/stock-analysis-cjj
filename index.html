@@ -375,17 +375,30 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
     <!-- 홈 탭 -->
     <section id="tab-home" class="tab-content active">
+      <!-- 주가 업데이트 카드 -->
+      <div class="card action-card" style="border-left:4px solid #10b981">
+        <div class="action-card-header">
+          <div>
+            <div class="action-card-title">📡 주가 업데이트</div>
+            <div id="price-update-time-text" class="action-card-sub">오늘 주가 미업데이트</div>
+          </div>
+          <button class="btn-collect" onclick="updatePrices()" id="price-update-btn" style="background:#10b981">업데이트</button>
+        </div>
+        <div id="price-update-progress" class="action-progress hidden"></div>
+        <div class="action-card-desc">오늘 일별 주가를 DB에 반영합니다. 약 1~2분 소요. 분석 전 먼저 실행하세요.</div>
+      </div>
+
       <!-- 데이터 수집 카드 -->
       <div class="card action-card collect-card">
         <div class="action-card-header">
           <div>
-            <div class="action-card-title">📥 데이터 수집</div>
+            <div class="action-card-title">📥 재무 수집</div>
             <div id="collect-time-text" class="action-card-sub">재무데이터 미수집</div>
           </div>
           <button class="btn-collect" onclick="collectData()" id="collect-btn">수집 실행</button>
         </div>
         <div id="collect-progress" class="action-progress hidden"></div>
-        <div class="action-card-desc">KRX 전체 종목 재무정보(목표주가·외국인소진·영업이익)를 네이버에서 수집합니다. 하루 1회 권장.</div>
+        <div class="action-card-desc">전 종목 재무정보(목표주가·외국인소진·영업이익)를 수집합니다. 주 1~2회 권장.</div>
       </div>
 
       <!-- 분석 실행 카드 -->
@@ -792,7 +805,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await checkServerStatus();
   await loadDefaults();
-  await Promise.all([loadResults(), refreshCollectStatus()]);
+  await Promise.all([loadResults(), refreshCollectStatus(), refreshPriceUpdateStatus()]);
   renderSettingsForms();
   startStatusPolling();
 });
@@ -956,6 +969,62 @@ async function loadDbStatus() {
   }
 }
 
+// ─── Price Update ────────────────────────────────────────────
+async function updatePrices() {
+  if (!state.apiUrl) { toast('먼저 ⚙ 설정에서 API 서버 URL을 입력하세요', true); showTab('settings'); return; }
+  try {
+    await api('/api/update-prices', { method: 'POST' });
+    document.getElementById('price-update-btn').disabled = true;
+    document.getElementById('price-update-progress').classList.remove('hidden');
+    document.getElementById('price-update-progress').textContent = '업데이트 시작...';
+    pollPriceUpdate();
+  } catch (e) {
+    if (e.message.includes('이미 실행')) { pollPriceUpdate(); return; }
+    toast('오류: ' + (e.message === 'NET_ERR' ? '서버 연결 실패' : e.message), true);
+  }
+}
+
+async function refreshPriceUpdateStatus() {
+  try {
+    const s = await api('/api/update-prices-status');
+    const timeEl = document.getElementById('price-update-time-text');
+    const progEl = document.getElementById('price-update-progress');
+    if (s.running) {
+      timeEl.textContent = s.progress || '업데이트 중...';
+      progEl.classList.remove('hidden');
+      progEl.textContent = s.progress || '';
+      document.getElementById('price-update-btn').disabled = true;
+    } else {
+      document.getElementById('price-update-btn').disabled = false;
+      progEl.classList.add('hidden');
+      if (s.last_run) timeEl.textContent = `마지막 업데이트: ${s.last_run.slice(0,16).replace('T',' ')}`;
+      else timeEl.textContent = '오늘 주가 미업데이트';
+      if (s.error) toast('업데이트 오류: ' + s.error, true);
+    }
+  } catch {}
+}
+
+async function pollPriceUpdate() {
+  const poll = async () => {
+    try {
+      const s = await api('/api/update-prices-status');
+      const progEl = document.getElementById('price-update-progress');
+      progEl.textContent = s.progress || '업데이트 중...';
+      document.getElementById('price-update-time-text').textContent = s.progress || '업데이트 중...';
+      if (s.running) {
+        setTimeout(poll, 3000);
+      } else {
+        document.getElementById('price-update-btn').disabled = false;
+        progEl.classList.add('hidden');
+        await refreshPriceUpdateStatus();
+        if (s.error) toast('업데이트 오류: ' + s.error, true);
+        else toast('주가 업데이트 완료! 이제 분석 실행을 눌러주세요.');
+      }
+    } catch { setTimeout(poll, 5000); }
+  };
+  setTimeout(poll, 2000);
+}
+
 // ─── Data Collection ─────────────────────────────────────────
 async function collectData() {
   if (!state.apiUrl) { toast('먼저 ⚙ 설정에서 API 서버 URL을 입력하세요', true); showTab('settings'); return; }
@@ -1053,6 +1122,7 @@ async function runAnalysis() {
 function startStatusPolling() {
   setTimeout(checkAnalysisStatus, 2000);
   setInterval(refreshCollectStatus, 10000);
+  setInterval(refreshPriceUpdateStatus, 10000);
 }
 
 async function checkAnalysisStatus() {
