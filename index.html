@@ -640,19 +640,62 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
         </div>
       </div>
 
-      <!-- 파라미터 -->
+      <!-- 파라미터 전체 설명 -->
       <div class="manual-section">
-        <div class="manual-section-title">🎛️ 핵심 파라미터</div>
+        <div class="manual-section-title">🎛️ 전체 파라미터 설명</div>
+
+        <div class="manual-section-title" style="font-size:13px;margin-top:12px">📌 필터 조건 (수익률)</div>
         <div class="manual-table-wrap">
           <table class="manual-table">
-            <thead><tr><th>파라미터</th><th>기본값</th><th>의미</th></tr></thead>
+            <thead><tr><th>파라미터</th><th>기본값</th><th>의미</th><th>조정 팁</th></tr></thead>
             <tbody>
-              <tr><td>para1</td><td>0</td><td>기간1 최소값 (0 = 제한 없음)</td></tr>
-              <tr><td>para4</td><td>1</td><td>외국인소진 최소 1%</td></tr>
-              <tr><td>para5</td><td>1000</td><td>전체순위 최소값 (낮을수록 상위)</td></tr>
-              <tr><td>para14</td><td>80</td><td>최소 상장 거래일 (DB 최대 100일)</td></tr>
-              <tr><td>para15~16</td><td>2만~30만</td><td>종가 범위</td></tr>
-              <tr><td>para17</td><td>-50</td><td>영업이익 최소 -50억</td></tr>
+              <tr><td>para1</td><td>0</td><td>기간1(최근 15일) 수익률 최소(%). 0이면 양수 종목만 통과.</td><td>하락장에 종목 없으면 -5~-10으로 완화</td></tr>
+              <tr><td>para2</td><td>0</td><td>기간6(1년) 수익률 최소(%). 장기 하락주 제외.</td><td>대부분 0 유지</td></tr>
+              <tr><td>para3</td><td>0</td><td>단기장기차이 최소(%). 최근 가격이 과거 대비 양수인지 확인.</td><td>0 유지 권장</td></tr>
+              <tr><td>para12</td><td>0</td><td>회귀선 기울기 최소. 양수 = para18일간 우상향 추세.</td><td>하락장 종목 없으면 -5로 완화</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="manual-section-title" style="font-size:13px;margin-top:12px">📌 필터 조건 (종목 특성)</div>
+        <div class="manual-table-wrap">
+          <table class="manual-table">
+            <thead><tr><th>파라미터</th><th>기본값</th><th>의미</th><th>조정 팁</th></tr></thead>
+            <tbody>
+              <tr><td>para4</td><td>1</td><td>외국인소진율 최소(%). 외국인 거의 없는 종목 제외.</td><td>1~5 사이 권장</td></tr>
+              <tr><td>para5</td><td>1000</td><td>전체순위 하한. 전체 종목 중 하위 N위 이하를 제외. 값이 클수록 엄격.</td><td>결과 없으면 500으로 낮춤</td></tr>
+              <tr><td>para13</td><td>0</td><td>목표주가 최소(원). 0이면 목표주가 없는 종목 제외.</td><td>0 유지 (목표주가 없는 종목 제외)</td></tr>
+              <tr><td>para14</td><td>80</td><td>최소 상장 거래일수. 신규상장 제외 목적.</td><td>60~100 사이 권장</td></tr>
+              <tr><td>para17</td><td>-50</td><td>영업이익 최소(억). 심각한 적자 종목 제외.</td><td>적자 허용 시 -200으로 낮춤</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="manual-section-title" style="font-size:13px;margin-top:12px">📌 필터 조건 (가격 범위)</div>
+        <div class="manual-table-wrap">
+          <table class="manual-table">
+            <thead><tr><th>파라미터</th><th>기본값</th><th>의미</th><th>조정 팁</th></tr></thead>
+            <tbody>
+              <tr><td>para6</td><td>20,000</td><td>초반평균가 최소(원). 기간2 시작 시점 평균 종가 하한.</td><td>저가주 제외 목적. 10,000~50,000</td></tr>
+              <tr><td>para7</td><td>3,000,000</td><td>초반평균가 최대(원). 초고가주 제외 목적.</td><td>삼성·하이닉스 포함 시 3,000,000 이상</td></tr>
+              <tr><td>para8</td><td>20,000</td><td>후반평균가 최소(원). 최근 5일 평균 종가 하한.</td><td>para6와 동일하게 설정 권장</td></tr>
+              <tr><td>para9</td><td>3,000,000</td><td>후반평균가 최대(원). 최근 5일 평균 종가 상한.</td><td>para7과 동일하게 설정 권장</td></tr>
+              <tr><td>para10</td><td>0</td><td>초반 표준편차 최소. 0이면 가격 변동 없는 종목 제외.</td><td>0 유지</td></tr>
+              <tr><td>para11</td><td>0</td><td>후반 표준편차 최소. 0이면 최근 가격 변동 없는 종목 제외.</td><td>0 유지</td></tr>
+              <tr><td>para15</td><td>20,000</td><td>현재 종가 최소(원).</td><td>para6와 동일하게 설정 권장</td></tr>
+              <tr><td>para16</td><td>3,000,000</td><td>현재 종가 최대(원).</td><td>para7과 동일하게 설정 권장</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="manual-section-title" style="font-size:13px;margin-top:12px">📌 분석 동작 설정 (신규)</div>
+        <div class="manual-table-wrap">
+          <table class="manual-table">
+            <thead><tr><th>파라미터</th><th>기본값</th><th>의미</th><th>조정 팁</th></tr></thead>
+            <tbody>
+              <tr><td><strong>para18</strong></td><td><strong>20</strong></td><td><strong>회귀선 계산 기간(일).</strong> 이 기간의 선형회귀 기울기가 para12 조건을 만족해야 통과. 값이 작을수록 단기 움직임에 민감, 클수록 중기 추세 반영.</td><td>5이하 → 하락장에 거의 모든 종목 탈락. 20~30 권장</td></tr>
+              <tr><td><strong>para19</strong></td><td><strong>30</strong></td><td><strong>추천 종목 수.</strong> 기간1기준/순위기준 각각 상위 N개 종목만 표시.</td><td>10~50 사이. 너무 많으면 품질 저하</td></tr>
+              <tr><td><strong>para20</strong></td><td><strong>5</strong></td><td><strong>평균 계산 기간(일).</strong> 각 기간별 시작/끝 가격 평균 산출 시 사용 일수.</td><td>3~10 사이. 기본 5일 권장</td></tr>
             </tbody>
           </table>
         </div>
@@ -666,9 +709,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
             <thead><tr><th>증상</th><th>원인 및 해결</th></tr></thead>
             <tbody>
               <tr><td>서버 연결 실패</td><td>run.sh 실행 여부 확인. URL이 바뀌었으면 설정에서 업데이트.</td></tr>
-              <tr><td>추천종목 0개</td><td>para14↓(60), para15↓(10000), para5↑(2000)으로 완화.</td></tr>
+              <tr><td>추천종목 0~1개</td><td>① para12 → -5 (회귀선 완화) ② para1 → -5 (단기수익률 완화) ③ para5 → 500으로 낮춤</td></tr>
+              <tr><td>삼성·하이닉스 안 나옴</td><td>para7·para9·para16 확인(3,000,000 이상). 하락장이면 para12·para1도 확인.</td></tr>
               <tr><td>URL 만료</td><td>run.sh 재시작 후 새 trycloudflare.com 주소를 설정에 입력.</td></tr>
-              <tr><td>분석 오래 걸림</td><td>재무 캐시 없으면 느림. 먼저 📥 데이터 수집 1회 실행 후 분석.</td></tr>
+              <tr><td>분석 오래 걸림</td><td>재무 캐시 없으면 느림. 먼저 📥 재무 수집 1회 실행 후 분석.</td></tr>
+              <tr><td>주가 데이터 오래됨</td><td>분석 탭 → 📡 주가 업데이트 먼저 실행 후 분석.</td></tr>
             </tbody>
           </table>
         </div>
@@ -908,10 +953,15 @@ function renderSettingsForms() {
   renderForm('periods-form', saved.periods || defaults.periods, '기간', k => `${k} 기간`);
 
   const paramLabels = {
-    para1:'단기 최소', para2:'장기 최소', para3:'단기장기차이 최소', para4:'외국인소진 최소',
-    para5:'전체순위 최소', para6:'초반평균가 최소', para7:'초반평균가 최대', para8:'후반평균가 최소',
-    para9:'후반평균가 최대', para10:'초반산포 최소', para11:'후반산포 최소', para12:'회귀선 최소',
-    para13:'목표주가 최소', para14:'종목기간 최소', para15:'종가 최소', para16:'종가 최대', para17:'영업이익 최소'
+    para1:'기간1 수익률 최소(%)', para2:'기간6 수익률 최소(%)', para3:'단기장기차이 최소(%)',
+    para4:'외국인소진 최소(%)', para5:'전체순위 하한(하위N위 제외)',
+    para6:'초반평균가 최소(원)', para7:'초반평균가 최대(원)',
+    para8:'후반평균가 최소(원)', para9:'후반평균가 최대(원)',
+    para10:'초반산포 최소', para11:'후반산포 최소',
+    para12:'회귀선 최소(기울기)', para13:'목표주가 최소(원)',
+    para14:'최소 상장일수(일)', para15:'종가 최소(원)', para16:'종가 최대(원)',
+    para17:'영업이익 최소(억)',
+    para18:'회귀선 계산기간(일,기본20)', para19:'추천종목수(기본30)', para20:'평균계산기간(일,기본5)'
   };
   renderForm('params-form', saved.params || defaults.params, '파라미터', k => paramLabels[k] || k);
 }
