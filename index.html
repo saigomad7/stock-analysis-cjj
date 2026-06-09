@@ -887,9 +887,10 @@ const FALLBACK_DEFAULTS = {
   periods: { 기간1: 15, 기간2: 30, 기간3: 2, 기간4: 3, 기간5: 6, 기간6: 1 },
   params: {
     para1: 0, para2: 0, para3: 0, para4: 1, para5: 1000,
-    para6: 20000, para7: 300000, para8: 20000, para9: 300000,
-    para10: 0, para11: 0, para12: 0, para13: 0, para14: 250,
-    para15: 20000, para16: 300000, para17: -50
+    para6: 20000, para7: 3000000, para8: 20000, para9: 3000000,
+    para10: 0, para11: 0, para12: 0, para13: 0, para14: 80,
+    para15: 20000, para16: 3000000, para17: -50,
+    para18: 20, para19: 30, para20: 5
   }
 };
 
@@ -963,7 +964,9 @@ function renderSettingsForms() {
     para17:'영업이익 최소(억)',
     para18:'회귀선 계산기간(일,기본20)', para19:'추천종목수(기본30)', para20:'평균계산기간(일,기본5)'
   };
-  renderForm('params-form', saved.params || defaults.params, '파라미터', k => paramLabels[k] || k);
+  // 이전에 저장된 params에 신규 para 누락 시 기본값으로 보완
+  const mergedParams = Object.assign({}, defaults.params, saved.params || {});
+  renderForm('params-form', mergedParams, '파라미터', k => paramLabels[k] || k);
 }
 
 function renderForm(containerId, data, type, labelFn) {
